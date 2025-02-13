@@ -70,7 +70,7 @@ char *strncat(char *dst, const char *src, size_t n){
 		return dst;
 	}
 	char *begin = dst;
-	while (dst) {
+	while (*dst) {
 		dst++;
 	}
 	int i = 0;
