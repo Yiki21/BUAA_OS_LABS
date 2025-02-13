@@ -59,22 +59,26 @@ char *strcat(char *dst, const char *src) {
 	while (*src) {
 		*dst++ = *src++;
 	}
+	*dst = '\0';
 	return begin;	
 }
 
 char *strncat(char *dst, const char *src, size_t n){
 	if (dst == NULL) {
-		return src;
+		return (char*) src;
 	} else if (src == NULL) {
 		return dst;
 	}
 	char *begin = dst;
-	while (*dst) {
+	while (dst) {
 		dst++;
-	}	
-	for (int i = 0; src && i < n; i++, src++) {
-		dst[i] = src[i];
 	}
+	int i = 0;
+	while (*src && i < n) {
+		*dst++ = *src++;
+		i++;
+	}
+	*dst = '\0';
 	return begin;
 }
 
@@ -93,24 +97,21 @@ char* strsep(char** stringp, const char* delim){
 	if (*stringp == NULL) {
 		return NULL;
 	}
-
-	char *begin = *stringp, *cur = *stringp;
-
+	char *start = *stringp, *cur = *stringp;
 	while (*cur) {
-		char *c = delim;
-		while (*c) {
-			if (*cur == *c) {
+		char *d = (char*)delim;
+		while (*d) {
+			if (*cur == *d) {
 				*cur = '\0';
 				*stringp = cur + 1;
-				return begin;
+				return start;
 			}
-			c++;
+			d++;
 		}
 		cur++;
 	}
-	
 	*stringp = NULL;
-	return begin;
+	return start;
 }
 
 void *memset(void *s, int c, size_t n) {
