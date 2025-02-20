@@ -1,7 +1,7 @@
 .PHONY: clean case_add case_sub case_mul case_div case_all push
 
 out: calc case_all
-	./calc < case_all
+	./calc < case_all > out
 
 case_add: casegen
 	./casegen add 100 > case_add
