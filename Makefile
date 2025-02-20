@@ -1,4 +1,4 @@
-.PHONY: clean
+.PHONY: clean case_add case_sub case_mul case_div case_all
 
 out: calc case_all
 	./calc < case_all
@@ -18,7 +18,7 @@ case_div: casegen
 case_all: case_add case_sub case_mul case_div
 
 casegen: casegen.c
-	gcc casengen.c -o casegen
+	gcc ./casegen.c -o casegen
 
 calc: calc.c
 	gcc calc.c -o calc
