@@ -10,16 +10,12 @@ case_sub: casegen
 	./casegen sub 100 > case_sub
 
 case_mul: casegen
-	./casengen mul 100 > case_mul
+	./casegen mul 100 > case_mul
 
 case_div: casegen
-	./casengen div 100 > case_div
+	./casegen div 100 > case_div
 
-case_all: 
-	./casegen add 100 > case_all
-	./casegen sub 100 >> case_all
-	./casegen mul 100 >> case_all
-	./casegen div 100 >> case_all
+case_all: case_add case_sub case_mul case_div
 
 casegen: casegen.c
 	gcc casengen.c -o casegen
