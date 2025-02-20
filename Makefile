@@ -1,4 +1,4 @@
-.PHONY: clean case_add case_sub case_mul case_div case_all
+.PHONY: clean case_add case_sub case_mul case_div case_all push
 
 out: calc case_all
 	./calc < case_all
@@ -16,12 +16,18 @@ case_div: casegen
 	./casegen div 100 > case_div
 
 case_all: case_add case_sub case_mul case_div
+	cat case_add case_sub case_mul case_div > case_all
 
 casegen: casegen.c
 	gcc ./casegen.c -o casegen
 
 calc: calc.c
 	gcc calc.c -o calc
+
+push: 
+	git add .
+	git commit -m 'Nothing'
+	git push
 
 clean:
 	rm -f out calc casegen case_* *.o
