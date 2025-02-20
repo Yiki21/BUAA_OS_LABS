@@ -43,3 +43,8 @@ run:
 
 objdump:
 	$(CROSS_COMPILE)objdump $(target) -aldS > hello.objdump
+
+push: 
+	git add .
+	git commit -m 'default'
+	git push
