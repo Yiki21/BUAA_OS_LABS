@@ -2,7 +2,7 @@
 #include <stddef.h>
 
 void hello(int a, int b, int c, int d, int e, int f) {
-	print_num(a);
+    print_num(a);
 	print_str("\n");
 	print_num(b);
 	print_str("\n");
