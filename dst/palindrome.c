@@ -18,8 +18,8 @@ int main() {
     int n;
     scanf("%d", &n);
     if (is_palindrome(n)) {
-        printf("Y\n");
+        printf("Y");
     } else {
-        printf("N\n");
+        printf("N");
     }
 }
