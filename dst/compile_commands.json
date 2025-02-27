@@ -1,0 +1,14 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-o",
+      "palindrome",
+      "palindrome.c"
+    ],
+    "directory": "/root/OS_Lab/23371544/dst",
+    "file": "/root/OS_Lab/23371544/dst/palindrome.c",
+    "output": "/root/OS_Lab/23371544/dst/palindrome"
+  }
+]
