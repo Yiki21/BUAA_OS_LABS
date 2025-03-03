@@ -1,0 +1,26 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-o",
+      "calc",
+      "calc.c"
+    ],
+    "directory": "/root/OS_Lab/23371544",
+    "file": "/root/OS_Lab/23371544/calc.c",
+    "output": "/root/OS_Lab/23371544/calc"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-o",
+      "casegen",
+      "./casegen.c"
+    ],
+    "directory": "/root/OS_Lab/23371544",
+    "file": "/root/OS_Lab/23371544/casegen.c",
+    "output": "/root/OS_Lab/23371544/casegen"
+  }
+]
