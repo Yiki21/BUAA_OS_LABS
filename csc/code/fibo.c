@@ -8,7 +8,7 @@ int fibo(int n) {
 	} else {
 		int i;
 		c = 0;
-		b = 1;
+    b = 1;
 		for (i = 2; i <= n; i++) {
 			a = b + c;
 			c = b;

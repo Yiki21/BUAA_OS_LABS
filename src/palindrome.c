@@ -8,8 +8,7 @@ int is_palindrome(int num) {
     }
     j--;
     for (; i <= j; i++, j--) {
-        if (digit[i] != digit[j])
-            return 0;
+        if (digit[i] != digit[j]) return 0;
     }
     return 1;
 }
