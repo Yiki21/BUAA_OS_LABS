@@ -6,9 +6,9 @@ mkdir code
 mkdir backup
 cd ..
 
-sed -n "s/hello p" origin/basic.c
+grep "hello" origin/basic.c
 
-mv origin/basic.c result/
+cp origin/basic.c result/
 
 i=0
 while (( i <= 20))
