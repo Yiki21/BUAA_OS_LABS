@@ -1,33 +1,14 @@
-#!bin/bash
+if (($# == 1))
+	cat stderr.txt
+fi
 
-mkdir result
-cd result
-mkdir code
-mkdir backup
-cd ..
+s=${1}[1]
 
-grep "hello" origin/basic.c
+if (($# == 2))
+	sed "${s},\$p" stderr.txt
+fi
 
-mv origin/basic.c result/
+t=${2}[1]
 
-cp origin/code result/backup -r
-
-i=0
-while (( i <= 20))
-do
-	touch result/code/${i}.c
-	sed "s/REPLACE/${i}/g" origin/code/${i}.c > result/code/${i}.c
-	rm origin/code/${i}.c
-	((i++))
-done
-
-gcc -o result/verify result/code/0.c result/code/1.c result/code/2.c result/code/3.c \
-result/code/4.c result/code/5.c result/code/6.c result/code/7.c result/code/8.c result/code/9.c \
-result/code/10.c result/code/11.c result/code/12.c result/code/13.c result/code/14.c \
-result/code/15.c result/code/16.c result/code/17.c result/code/18.c result/code/19.c result/code/20.c 
-
-./result/verify 2> stderr.txt
-
-chmod 440 stderr.txt
-
-
+if (($# == 3))
+	sed "${t},${2}p" stderr.txt
