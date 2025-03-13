@@ -8,13 +8,15 @@ cd ..
 
 grep "hello" origin/basic.c
 
-cp origin/basic.c result/
+mv origin/basic.c result/
+
+cp origin/code result/backup/
 
 i=0
 while (( i <= 20))
 do
-	sed -n "s/REPLACE/${i}/g" origin/code/${i}.c
-	mv origin/code/${i}.c result/code/${i}.c
+	touch result/code/${i}.c
+	sed "s/REPLACE/${i}/g" origin/code/${i}.c > result/code/${i}.c
 	((i++))
 done
 
