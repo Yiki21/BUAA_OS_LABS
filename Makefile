@@ -1,6 +1,6 @@
 all:	
 	gcc -c check.c -o check.o
-	gcc src/output.c src/main.c -Isrc/include/ -o src/hmain
+	gcc src/output.c src/main.c -Isrc/include/ -o src/main
 	cp src/main out/main
 	rm src/main	
 
