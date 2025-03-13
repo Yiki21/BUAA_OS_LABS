@@ -92,3 +92,9 @@ EOF
 done
 
 echo "RIGHT! APPEND" >> stderr.txt
+j=2
+while ((j <= 9))
+do
+	cat exam_1.sh > exam_2.sh
+	((j++))
+done
