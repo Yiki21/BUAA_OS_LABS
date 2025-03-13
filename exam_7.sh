@@ -1,1 +1,1 @@
-./result/verify 2> stderr.txt
+./result/verify 2>> stderr.txt
