@@ -10,7 +10,7 @@ grep "hello" origin/basic.c
 
 mv origin/basic.c result/
 
-cp origin/code/ result/backup/ -r
+cp origin/code result/backup -r
 
 i=0
 while (( i <= 20))
