@@ -11,10 +11,10 @@
  *   Returns 0 if 'binary' isn't an ELF, otherwise returns 1.
  */
 int is_elf_format(const void *binary, size_t size) {
-	Elf32_Ehdr *ehdr = (Elf32_Ehdr *)binary;
-	return size >= sizeof(Elf32_Ehdr) && ehdr->e_ident[EI_MAG0] == ELFMAG0 &&
-	       ehdr->e_ident[EI_MAG1] == ELFMAG1 && ehdr->e_ident[EI_MAG2] == ELFMAG2 &&
-	       ehdr->e_ident[EI_MAG3] == ELFMAG3;
+    Elf32_Ehdr *ehdr = (Elf32_Ehdr *)binary;
+    return size >= sizeof(Elf32_Ehdr) && ehdr->e_ident[EI_MAG0] == ELFMAG0 &&
+           ehdr->e_ident[EI_MAG1] == ELFMAG1 && ehdr->e_ident[EI_MAG2] == ELFMAG2 &&
+           ehdr->e_ident[EI_MAG3] == ELFMAG3;
 }
 
 /* Overview:
@@ -29,30 +29,37 @@ int is_elf_format(const void *binary, size_t size) {
  */
 
 int readelf(const void *binary, size_t size) {
-	Elf32_Ehdr *ehdr = (Elf32_Ehdr *)binary;
+    Elf32_Ehdr *ehdr = (Elf32_Ehdr *)binary;
 
-	// Check whether `binary` is a ELF file.
-	if (!is_elf_format(binary, size)) {
-		fputs("not an elf file\n", stderr);
-		return -1;
-	}
+    // Check whether `binary` is a ELF file.
+    if (!is_elf_format(binary, size)) {
+        fputs("not an elf file\n", stderr);
+        return -1;
+    }
 
-	// Get the address of the section table, the number of section headers and the size of a
-	// section header.
-	const void *sh_table;
-	Elf32_Half sh_entry_count;
-	Elf32_Half sh_entry_size;
-	/* Exercise 1.1: Your code here. (1/2) */
+    // Get the address of the section table, the number of section headers and the size of a
+    // section header.
+    const void *sh_table;
+    Elf32_Half sh_entry_count;
+    Elf32_Half sh_entry_size;
+    /* Exercise 1.1: Your code here. (1/2) */
 
-	// For each section header, output its index and the section address.
-	// The index should start from 0.
-	for (int i = 0; i < sh_entry_count; i++) {
-		const Elf32_Shdr *shdr;
-		unsigned int addr;
-		/* Exercise 1.1: Your code here. (2/2) */
+    sh_table = binary + ehdr->e_shoff;
+    sh_entry_count = ehdr->e_shnum;
+    sh_entry_size = ehdr->e_shentsize;
 
-		printf("%d:0x%x\n", i, addr);
-	}
+    // For each section header, output its index and the section address.
+    // The index should start from 0.
+    for (int i = 0; i < sh_entry_count; i++) {
+        const Elf32_Shdr *shdr;
+        unsigned int addr;
+        /* Exercise 1.1: Your code here. (2/2) */
 
-	return 0;
+        shdr = (Elf32_Shdr *)(sh_table + i * sh_entry_size);
+        addr = shdr->sh_addr;
+
+        printf("%d:0x%x\n", i, addr);
+    }
+
+    return 0;
 }

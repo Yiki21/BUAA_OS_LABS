@@ -1,0 +1,28 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-I../include",
+      "-c",
+      "-o",
+      "fibo.o",
+      "fibo.c"
+    ],
+    "directory": "/root/OS_Lab/23371544/csc/code",
+    "file": "/root/OS_Lab/23371544/csc/code/fibo.c",
+    "output": "/root/OS_Lab/23371544/csc/code/fibo.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-I../include",
+      "-c",
+      "-o",
+      "main.o",
+      "main.c"
+    ],
+    "directory": "/root/OS_Lab/23371544/csc/code",
+    "file": "/root/OS_Lab/23371544/csc/code/main.c",
+    "output": "/root/OS_Lab/23371544/csc/code/main.o"
+  }
+]
