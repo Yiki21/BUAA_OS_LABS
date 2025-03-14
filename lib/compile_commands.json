@@ -1,0 +1,41 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-I../include/",
+      "-c",
+      "-o",
+      "elfloader.o",
+      "elfloader.c"
+    ],
+    "directory": "/root/dev/OS_Lab/23371544/lib",
+    "file": "/root/dev/OS_Lab/23371544/lib/elfloader.c",
+    "output": "/root/dev/OS_Lab/23371544/lib/elfloader.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-I../include/",
+      "-c",
+      "-o",
+      "print.o",
+      "print.c"
+    ],
+    "directory": "/root/dev/OS_Lab/23371544/lib",
+    "file": "/root/dev/OS_Lab/23371544/lib/print.c",
+    "output": "/root/dev/OS_Lab/23371544/lib/print.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-I../include/",
+      "-c",
+      "-o",
+      "string.o",
+      "string.c"
+    ],
+    "directory": "/root/dev/OS_Lab/23371544/lib",
+    "file": "/root/dev/OS_Lab/23371544/lib/string.c",
+    "output": "/root/dev/OS_Lab/23371544/lib/string.o"
+  }
+]
