@@ -5,37 +5,11 @@
       "-I../include/",
       "-c",
       "-o",
-      "machine.o",
-      "machine.c"
-    ],
-    "directory": "/root/dev/OS_Lab/23371544/kern",
-    "file": "/root/dev/OS_Lab/23371544/kern/machine.c",
-    "output": "/root/dev/OS_Lab/23371544/kern/machine.o"
-  },
-  {
-    "arguments": [
-      "/usr/bin/cc",
-      "-I../include/",
-      "-c",
-      "-o",
       "printk.o",
       "printk.c"
     ],
-    "directory": "/root/dev/OS_Lab/23371544/kern",
-    "file": "/root/dev/OS_Lab/23371544/kern/printk.c",
-    "output": "/root/dev/OS_Lab/23371544/kern/printk.o"
-  },
-  {
-    "arguments": [
-      "/usr/bin/cc",
-      "-I../include/",
-      "-c",
-      "-o",
-      "panic.o",
-      "panic.c"
-    ],
-    "directory": "/root/dev/OS_Lab/23371544/kern",
-    "file": "/root/dev/OS_Lab/23371544/kern/panic.c",
-    "output": "/root/dev/OS_Lab/23371544/kern/panic.o"
+    "directory": "/home/zhangyi/dev/OS_Lab/23371544/kern",
+    "file": "/home/zhangyi/dev/OS_Lab/23371544/kern/printk.c",
+    "output": "/home/zhangyi/dev/OS_Lab/23371544/kern/printk.o"
   }
 ]

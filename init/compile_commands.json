@@ -1,0 +1,12 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-I../include/",
+      "-c",
+      "init.c"
+    ],
+    "directory": "/home/zhangyi/dev/OS_Lab/23371544/init",
+    "file": "/home/zhangyi/dev/OS_Lab/23371544/init/init.c"
+  }
+]

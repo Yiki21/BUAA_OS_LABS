@@ -8,9 +8,9 @@
       "elfloader.o",
       "elfloader.c"
     ],
-    "directory": "/root/dev/OS_Lab/23371544/lib",
-    "file": "/root/dev/OS_Lab/23371544/lib/elfloader.c",
-    "output": "/root/dev/OS_Lab/23371544/lib/elfloader.o"
+    "directory": "/home/zhangyi/dev/OS_Lab/23371544/lib",
+    "file": "/home/zhangyi/dev/OS_Lab/23371544/lib/elfloader.c",
+    "output": "/home/zhangyi/dev/OS_Lab/23371544/lib/elfloader.o"
   },
   {
     "arguments": [
@@ -21,9 +21,9 @@
       "print.o",
       "print.c"
     ],
-    "directory": "/root/dev/OS_Lab/23371544/lib",
-    "file": "/root/dev/OS_Lab/23371544/lib/print.c",
-    "output": "/root/dev/OS_Lab/23371544/lib/print.o"
+    "directory": "/home/zhangyi/dev/OS_Lab/23371544/lib",
+    "file": "/home/zhangyi/dev/OS_Lab/23371544/lib/print.c",
+    "output": "/home/zhangyi/dev/OS_Lab/23371544/lib/print.o"
   },
   {
     "arguments": [
@@ -34,8 +34,8 @@
       "string.o",
       "string.c"
     ],
-    "directory": "/root/dev/OS_Lab/23371544/lib",
-    "file": "/root/dev/OS_Lab/23371544/lib/string.c",
-    "output": "/root/dev/OS_Lab/23371544/lib/string.o"
+    "directory": "/home/zhangyi/dev/OS_Lab/23371544/lib",
+    "file": "/home/zhangyi/dev/OS_Lab/23371544/lib/string.c",
+    "output": "/home/zhangyi/dev/OS_Lab/23371544/lib/string.o"
   }
 ]
