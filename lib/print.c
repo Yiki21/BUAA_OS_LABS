@@ -51,7 +51,10 @@ void vprintfmt(fmt_callback_t out, void *data, const char *fmt, va_list ap) {
             padc = '0';
             ladjust = 0;
             fmt++;
-        }
+        } else {
+		padc = ' ';
+		ladjust = 0;
+	}
         /* get width */
         /* Exercise 1.4: Your code here. (6/8) */
         width = 0;
