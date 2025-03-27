@@ -1,7 +1,6 @@
 #include <types.h>
 #include <print.h>
 #include <stream.h>
-#include <printk.h>
 
 void *memcpy(void *dst, const void *src, size_t n) {
 	void *dstaddr = dst;
