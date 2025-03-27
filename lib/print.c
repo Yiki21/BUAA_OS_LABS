@@ -72,10 +72,11 @@ void vprintfmt(fmt_callback_t out, void *data, const char *fmt, va_list ap) {
 			num = va_arg(ap, int);
 		}
 
-		out(data, ' ', 1);
-		out(data, '=', 1);
-		out(data, '>', 1);
-		out(data, ' ', 1);
+
+                print_char(out, data, ' ', 1, 0);
+                print_char(out, data, '=', 1, 0);
+                print_char(out, data, '>', 1, 0);
+                print_char(out, data, ' ', 1, 0);
 
 		if (num < 0) {
 			neg_flag = 1;
