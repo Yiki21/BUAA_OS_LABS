@@ -118,7 +118,7 @@ void outputmem(void *data, const char *buf, size_t len) {
 	for (int i = 0; i < len; i++) {
 		p[i] = buf[i];
 	};
-	f->ptr = p;
+	f->ptr += len;
 	if (f->end < f->ptr) 
 		f->end = f->ptr;
 }

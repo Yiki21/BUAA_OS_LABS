@@ -47,7 +47,10 @@ void vprintfmt(fmt_callback_t out, void *data, const char *fmt, va_list ap) {
             padc = '0';
             ladjust = 0;
             fmt++;
-        }
+        } else {
+		ladjust = 0;
+		padc = ' ';
+	}
         /* get width */
         /* Exercise 1.4: Your code here. (6/8) */
         width = 0;
@@ -73,6 +76,7 @@ void vprintfmt(fmt_callback_t out, void *data, const char *fmt, va_list ap) {
                 }
                 print_num(out, data, num, 2, 0, width, ladjust, padc, 0);
                 break;
+		case 'd':
             case 'D':
                 if (long_flag) {
                     num = va_arg(ap, long int);
@@ -113,9 +117,6 @@ void vprintfmt(fmt_callback_t out, void *data, const char *fmt, va_list ap) {
                     num = va_arg(ap, int);
                 }
                 print_num(out, data, num, 10, 0, width, ladjust, padc, 0);
-                break;
-
-            case 'x':
                 if (long_flag) {
                     num = va_arg(ap, long int);
                 } else {
@@ -274,3 +275,6 @@ void print_num(fmt_callback_t out, void *data, unsigned long u, int base, int ne
 
     out(data, buf, length);
 }
+#include <print.h>
+
+/* forward declaration */
