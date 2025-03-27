@@ -62,8 +62,7 @@ void vprintfmt(fmt_callback_t out, void *data, const char *fmt, va_list ap) {
             fmt++;
         } else {
             long_flag = 0;
-        }
-
+        }	
         neg_flag = 0;
         switch (*fmt) {
             case 'b':
@@ -74,8 +73,6 @@ void vprintfmt(fmt_callback_t out, void *data, const char *fmt, va_list ap) {
                 }
                 print_num(out, data, num, 2, 0, width, ladjust, padc, 0);
                 break;
-
-            case 'd':
             case 'D':
                 if (long_flag) {
                     num = va_arg(ap, long int);
