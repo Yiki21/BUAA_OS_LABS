@@ -1,6 +1,7 @@
 #include <types.h>
 #include <print.h>
 #include <stream.h>
+#include <printk.h>
 
 void *memcpy(void *dst, const void *src, size_t n) {
 	void *dstaddr = dst;
@@ -99,10 +100,10 @@ int strcmp(const char *p, const char *q) {
 }
 
 FILE *fmemopen(FILE *stream, void *buf, const char *mode) {
-	if (*mode == 'w') {
+	if (mode[0] == 'w') {
 		stream->ptr = stream->base = stream->end = (char*)buf;
 		return stream;
-	} else if (*mode == 'a') {
+	} else if (mode[0] == 'a') {
 		stream->base = (char*)buf;
 		char * p = buf;
 		while (*p) p++;
@@ -110,6 +111,7 @@ FILE *fmemopen(FILE *stream, void *buf, const char *mode) {
 	} else {
 		return NULL;
 	}
+	return NULL;
 }
 
 void outputmem(void *data, const char *buf, size_t len) {

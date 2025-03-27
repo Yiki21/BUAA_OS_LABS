@@ -34,6 +34,11 @@ void vprintfmt(fmt_callback_t out, void *data, const char *fmt, va_list ap) {
         /* we found a '%' */
         /* Exercise 1.4: Your code here. (4/8) */
         if (*fmt == '%') {
+		if (*(fmt + 1) == '%') {
+			out(data, fmt, 1);
+			fmt += 2;
+			continue;
+		}
             fmt++;
         }
         /* check format flag */
