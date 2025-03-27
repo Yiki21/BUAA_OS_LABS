@@ -33,6 +33,11 @@ void vprintfmt(fmt_callback_t out, void *data, const char *fmt, va_list ap) {
         /* we found a '%' */
         /* Exercise 1.4: Your code here. (4/8) */
         if (*fmt == '%') {
+		if (*(fmt + 1) == '%') {
+			out(data, fmt, 1);
+			fmt += 2;
+			continue;
+		}
             fmt++;
         }
         /* check format flag */
@@ -72,12 +77,7 @@ void vprintfmt(fmt_callback_t out, void *data, const char *fmt, va_list ap) {
 			num = va_arg(ap, int);
 		}
 
-
-                print_char(out, data, ' ', 1, 0);
-                print_char(out, data, '=', 1, 0);
-                print_char(out, data, '>', 1, 0);
-                print_char(out, data, ' ', 1, 0);
-
+		out(data, " => ", 4);
 		if (num < 0) {
 			neg_flag = 1;
 			num = -num;
