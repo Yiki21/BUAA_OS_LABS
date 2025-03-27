@@ -107,6 +107,7 @@ FILE *fmemopen(FILE *stream, void *buf, const char *mode) {
 		char * p = buf;
 		while (*p) p++;
 		stream->ptr = stream->end = p;
+		return stream;
 	} else {
 		return NULL;
 	}
