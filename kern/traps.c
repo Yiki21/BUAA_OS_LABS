@@ -24,6 +24,6 @@ void (*exception_handlers[32])(void) = {
  *   'genex.S' wraps this function in 'handle_reserved'.
  */
 void do_reserved(struct Trapframe *tf) {
-	print_tf(tf);
-	panic("Unknown ExcCode %2d", (tf->cp0_cause >> 2) & 0x1f);
+    print_tf(tf);
+    panic("Unknown ExcCode %2d", (tf->cp0_cause >> 2) & 0x1f);
 }

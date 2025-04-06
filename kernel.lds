@@ -10,8 +10,16 @@ ENTRY(_start)
 
 SECTIONS {
 	/* Exercise 3.10: Your code here. */
+  . = 0x80000000;
+  .tlb_miss_entry : {
+	  *(.text.tlb_miss_entry)
+  }
 
-	/* fill in the correct address of the key sections: text, data, bss. */
+  . = 0x80000180;
+  .exc_gen_entry : {
+    *(.text.exc_gen_entry)
+  }
+  /* fill in the correct address of the key sections: text, data, bss. */
 	/* Hint: The loading address can be found in the memory layout. And the data section
 	 *       and bss section are right after the text section, so you can just define
 	 *       them after the text section.
@@ -21,15 +29,16 @@ SECTIONS {
   . = 0x80020000;
 	/* Step 2: Define the text section. */
 	/* Exercise 1.2: Your code here. (2/4) */
-  text : {*(text)}
+  text : {*(.text)}
 	/* Step 3: Define the data section. */
 	/* Exercise 1.2: Your code here. (3/4) */
-  data : {*(data)}
+  data : {*(.data)}
 	bss_start = .;
 	/* Step 4: Define the bss section. */
 	/* Exercise 1.2: Your code here. (4/4) */
-  bss : {*(bss)}
+  bss : {*(.bss)}
 	bss_end = .;
+
 	. = 0x80400000;
 	end = . ;
 }
