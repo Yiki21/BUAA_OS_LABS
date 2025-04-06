@@ -5,6 +5,7 @@
 #include <pmap.h>
 #include <printk.h>
 #include <sched.h>
+#include "error.h"
 
 struct Env envs[NENV] __attribute__((aligned(PAGE_SIZE)));  // All environments
 
@@ -73,7 +74,9 @@ static void map_segment(Pde *pgdir, u_int asid, u_long pa, u_long va, u_int size
          *  Use 'pa2page' to get the 'struct Page *' of the physical address.
          */
         /* Exercise 3.2: Your code here. */
-        page_insert(pgdir, asid, pa2page(pa + i), va + i, perm | PTE_V);
+        if (page_insert(pgdir, asid, pa2page(pa + i), va + i, perm | PTE_V) == -E_NO_MEM) {
+            panic("map_segment: page_insert failed");
+        }
     }
 }
 
@@ -228,10 +231,14 @@ int env_alloc(struct Env **new, u_int parent_id) {
 
     /* Step 1: Get a free Env from 'env_free_list' */
     /* Exercise 3.4: Your code here. (1/4) */
-    e = LIST_FIRST(&env_free_list);
+    if ((e = LIST_FIRST(&env_free_list)) == NULL) {
+        return -E_NO_FREE_ENV;
+    }
     /* Step 2: Call a 'env_setup_vm' to initialize the user address space for this new Env. */
     /* Exercise 3.4: Your code here. (2/4) */
-    env_setup_vm(e);
+    if (env_setup_vm(e) != 0) {
+        return -E_NO_FREE_ENV;
+    }
     /* Step 3: Initialize these fields for the new Env with appropriate values:
      *   'env_user_tlb_mod_entry' (lab4), 'env_runs' (lab6), 'env_id' (lab3), 'env_asid' (lab3),
      *   'env_parent_id' (lab3)
@@ -245,7 +252,9 @@ int env_alloc(struct Env **new, u_int parent_id) {
     /* Exercise 3.4: Your code here. (3/4) */
     e->env_id = mkenvid(e);
     e->env_parent_id = parent_id;
-    asid_alloc(&e->env_asid);
+    if (asid_alloc(&e->env_asid) == E_NO_FREE_ENV) {
+        return -E_NO_FREE_ENV;
+    }
     /* Step 4: Initialize the sp and 'cp0_status' in 'e->env_tf'.
      *   Set the EXL bit to ensure that the processor remains in kernel mode during context
      * recovery. Additionally, set UM to 1 so that when ERET unsets EXL, the processor
@@ -288,12 +297,16 @@ static int load_icode_mapper(void *data, u_long va, size_t offset, u_int perm, c
 
     /* Step 1: Allocate a page with 'page_alloc'. */
     /* Exercise 3.5: Your code here. (1/2) */
-
+    if (page_alloc(&p) == -E_NO_MEM) {
+        panic("has no free page when loading code");
+        return -E_NO_MEM;
+    }
     /* Step 2: If 'src' is not NULL, copy the 'len' bytes started at 'src' into 'offset' at this
      * page. */
     // Hint: You may want to use 'memcpy'.
     if (src != NULL) {
         /* Exercise 3.5: Your code here. (2/2) */
+        memcpy((void *)(page2kva(p) + offset), src, len);
     }
 
     /* Step 3: Insert 'p' into 'env->env_pgdir' at 'va' with 'perm'. */
@@ -328,6 +341,7 @@ static void load_icode(struct Env *e, const void *binary, size_t size) {
 
     /* Step 3: Set 'e->env_tf.cp0_epc' to 'ehdr->e_entry'. */
     /* Exercise 3.6: Your code here. */
+    e->env_tf.cp0_epc = ehdr->e_entry;
 }
 
 /* Overview:
@@ -342,13 +356,18 @@ struct Env *env_create(const void *binary, size_t size, int priority) {
     struct Env *e;
     /* Step 1: Use 'env_alloc' to alloc a new env, with 0 as 'parent_id'. */
     /* Exercise 3.7: Your code here. (1/3) */
-
+    if (env_alloc(&e, 0) == -E_NO_FREE_ENV) {
+        panic("env_create: no free env");
+        return NULL;
+    }
     /* Step 2: Assign the 'priority' to 'e' and mark its 'env_status' as runnable. */
     /* Exercise 3.7: Your code here. (2/3) */
-
+    e->env_pri = priority;
+    e->env_status = ENV_RUNNABLE;
     /* Step 3: Use 'load_icode' to load the image from 'binary', and insert 'e' into
      * 'env_sched_list' using 'TAILQ_INSERT_HEAD'. */
     /* Exercise 3.7: Your code here. (3/3) */
+    load_icode(e, binary, size);
 
     return e;
 }
@@ -428,7 +447,7 @@ extern void env_pop_tf(struct Trapframe *tf, u_int asid) __attribute__((noreturn
  * Hints:
  *   You may use these functions: 'env_pop_tf'.
  */
-void env_run(struct Env *e) {
+__attribute__((noreturn)) void env_run(struct Env *e) {
     assert(e->env_status == ENV_RUNNABLE);
     // WARNING BEGIN: DO NOT MODIFY FOLLOWING LINES!
 #ifdef MOS_PRE_ENV_RUN
@@ -451,6 +470,7 @@ void env_run(struct Env *e) {
 
     /* Step 3: Change 'cur_pgdir' to 'curenv->env_pgdir', switching to its address space. */
     /* Exercise 3.8: Your code here. (1/2) */
+    cur_pgdir = curenv->env_pgdir;
 
     /* Step 4: Use 'env_pop_tf' to restore the curenv's saved context (registers) and return/go
      * to user mode.
@@ -461,6 +481,7 @@ void env_run(struct Env *e) {
      *    returning to the kernel caller, making 'env_run' a 'noreturn' function as well.
      */
     /* Exercise 3.8: Your code here. (2/2) */
+    env_pop_tf(&curenv->env_tf, curenv->env_asid);
 }
 
 void env_check() {
