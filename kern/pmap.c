@@ -600,14 +600,16 @@ void free(void *p) {
 	mb->ptr = NULL;
 
 	struct MBlock *next = LIST_NEXT(mb, mb_link);
-	if (next != NULL && next->free == 1) {
+	while (next != NULL && next->free == 1) {
 		mb->size += next->size;
 		LIST_REMOVE(next, mb_link);
+		next = LIST_NEXT(mb, mb_link);
 	}
 	
 	struct MBlock *prev = MBLOCK_PREV(mb, mb_link);
-	if (prev != NULL && prev->free == 1 ) {
+	while (prev != NULL && prev->free == 1 ) {
 		prev->size += mb->size;
 		LIST_REMOVE(mb, mb_link);
+		prev = MBLOCK_PREV(mb, mb_link);
 	}
 }
