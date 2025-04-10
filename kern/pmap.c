@@ -562,6 +562,8 @@ void *malloc(size_t size) {
 //	printk("!!!%d", size);
 	struct MBlock *mb;
 	LIST_FOREACH(mb, &mblock_list, mb_link) {
+		if (mb->free == 0) 
+			continue;
 		if (mb->size >= size + 32) {
 			mb->free = 0;
 			mb->ptr = mb->data;
