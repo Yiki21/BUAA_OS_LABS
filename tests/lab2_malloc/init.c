@@ -75,7 +75,7 @@ void rem(u_int a, u_int b) {
 void malloc_test() {
 	void *p1 = malloc(0x100000);
 	assert(check((u_int)p1, (u_int)p1 + 0x100000));
-
+//	printk("%ud %ud", address[0], end[0]);
 	void *p2 = malloc(0x100000);
 	assert(check((u_int)p2, (u_int)p2 + 0x100000));
 
