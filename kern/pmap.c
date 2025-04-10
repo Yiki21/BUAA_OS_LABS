@@ -530,3 +530,24 @@ void page_check(void) {
 
     printk("page_check() succeeded!\n");
 }
+
+
+u_int page_conditional_remove(Pde *pgdir, u_int asid, u_int perm_mask, u_long begin_va, u_long end_va) {
+	int cont = 0;
+	for ( ; begin_va < end_va ; begin_va += PAGE_SIZE) {
+		Pte * pte;
+		struct Page* p = page_lookup(pgdir, begin_va, &pte);
+		if (p == NULL) {
+			continue;
+		}
+		if (((*pte) & perm_mask ) == 0) {
+			continue;
+		}
+		page_decref(p);
+		*pte = 0;
+		tlb_invalidate(asid, begin_va);
+		cont++;
+	}
+//	printk("!!!!%d", cont);
+	return cont;
+}
