@@ -120,10 +120,6 @@ int envid2env(u_int envid, struct Env **penv, int checkperm) {
         *penv = curenv;
         return 0;
     }
-    
-    if (envid >= NENV) {
-        return -E_BAD_ENV;
-    }
 
     e = &envs[ENVX(envid)];
 
