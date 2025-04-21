@@ -251,10 +251,9 @@ int page_insert(Pde *pgdir, u_int asid, struct Page *pp, u_long va, u_int perm) 
     /* If failed to create, return the error. */
     /* Exercise 2.7: Your code here. (2/3) */
 
-    int code;
-    if ((code = pgdir_walk(pgdir, va, 1, &pte)) != 0) {
+    if ((pgdir_walk(pgdir, va, 1, &pte)) != 0) {
         // panic("pgdir_wrong when page_insert");
-        return code;
+        return -E_NO_MEM;
     }
 
     *pte = page2pa(pp) | perm | PTE_C_CACHEABLE | PTE_V;

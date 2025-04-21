@@ -155,6 +155,8 @@ int sys_mem_alloc(u_int envid, u_int va, u_int perm) {
 	/* Exercise 4.4: Your code here. (3/3) */
 	try(page_alloc(&pp));
 
+	//printk("sys_mem_alloc: pp = %x\n", pp);
+
 	/* Step 4: Map the allocated page at 'va' with permission 'perm' using 'page_insert'. */
 	return page_insert(env->env_pgdir, env->env_asid, pp, va, perm);
 }
@@ -196,7 +198,7 @@ int sys_mem_map(u_int srcid, u_int srcva, u_int dstid, u_int dstva, u_int perm) 
 	/* Step 4: Find the physical page mapped at 'srcva' in the address space of 'srcid'. */
 	/* Return -E_INVAL if 'srcva' is not mapped. */
 	/* Exercise 4.5: Your code here. (4/4) */
-	pp = page_lookup(srcenv->env_pgdir, srcenv->env_asid, srcva);
+	pp = page_lookup(srcenv->env_pgdir, srcva, NULL);
 	if (pp == NULL) {
 		return -E_INVAL;
 	}
@@ -226,7 +228,7 @@ int sys_mem_unmap(u_int envid, u_int va) {
 
 	/* Step 2: Convert the envid to its corresponding 'struct Env *' using 'envid2env'. */
 	/* Exercise 4.6: Your code here. (2/2) */
-	try(envid2env(envid, &e, 1));
+	try(envid2env(envid, &e, 0));
 
 	/* Step 3: Unmap the physical page at 'va' in the address space of 'envid'. */
 	page_remove(e->env_pgdir, e->env_asid, va);
