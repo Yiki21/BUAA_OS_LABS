@@ -258,8 +258,7 @@ int sys_exofork(void) {
 
 	/* Step 2: Copy the current Trapframe below 'KSTACKTOP' to the new env's 'env_tf'. */
 	/* Exercise 4.9: Your code here. (2/4) */
-	uint32_t* tf = (uint32_t *)KSTACKTOP - TF_SIZE;
-	memcpy(&e->env_tf, tf, TF_SIZE);
+	e->env_tf = *((struct Trapframe *)KSTACKTOP - 1);
 
 	/* Step 3: Set the new env's 'env_tf.regs[2]' to 0 to indicate the return value in child. */
 	/* Exercise 4.9: Your code here. (3/4) */
