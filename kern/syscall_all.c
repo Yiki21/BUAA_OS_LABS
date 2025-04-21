@@ -572,5 +572,5 @@ void do_syscall(struct Trapframe *tf) {
 	/* Step 5: Invoke 'func' with retrieved arguments and store its return value to $v0 in 'tf'.
 	 */
 	/* Exercise 4.2: Your code here. (4/4) */
-	func(arg1, arg2, arg3, arg4, arg5);
+	tf->regs[2] = func(arg1, arg2, arg3, arg4, arg5);
 }
