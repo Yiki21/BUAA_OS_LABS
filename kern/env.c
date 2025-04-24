@@ -7,12 +7,10 @@
 #include <sched.h>
 #include "error.h"
 
+struct Env_edf_sched_list env_edf_sched_list; // EDF 调度队列
+
+
 struct Env envs[NENV] __attribute__((aligned(PAGE_SIZE)));  // All environments
-struct LIST_HEAD(Env_edf_sched_list, Env);
-
-extern struct Env_edf_sched_list env_edf_sched_list; // EDF 调度队列
-
-struct Env *env_create_edf(const void *binary, size_t size, int runtime, int period);
 struct Env *curenv = NULL;             // the current env
 static struct Env_list env_free_list;  // Free list
 
@@ -155,7 +153,7 @@ void env_init(void) {
     /* Step 2: Traverse the elements of 'envs' array, set their status to 'ENV_FREE' and insert
      * them into the 'env_free_list'. Make sure, after the insertion, the order of envs in the
      * list should be the same as they are in the 'envs' array. */
-
+    LIST_INIT(&env_edf_sched_list);
     /* Exercise 3.1: Your code here. (2/2) */
     for (i = NENV - 1; i >= 0; i--) {
         envs[i].env_status = ENV_FREE;
@@ -577,12 +575,13 @@ void envid2env_check() {
 }
 
 struct Env *env_create_edf(const void *binary, size_t size, int runtime, int period) {
-	struct Env *e = env_create(binary, size, 1);
+	struct Env *e = env_create(binary, size, 0);
 
 	e->env_edf_runtime = runtime;
 	e->env_edf_period = period;
 	e->env_period_deadline = 0; // 初始化为 0，使进程在首次调用 schedule 函数时触发条件判断，进入首个运行周期
 	e->env_status = ENV_RUNNABLE;
+	e->env_runtime_left = runtime;
 
 	return e;
 }

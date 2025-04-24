@@ -28,8 +28,8 @@ __attribute__((noreturn)) void schedule(int yield) {
     }
 
     int smallest = 100000;
-    struct Env *sel;
-    LIST_FOREACH (env, &env_edf_sched_list, end_edf_sched_link) {
+    struct Env *sel = NULL;
+    LIST_FOREACH (env, &env_edf_sched_list, env_edf_sched_link) {
 	if (env->env_runtime_left > 0 && env->env_period_deadline <= smallest) {
 		if (env->env_period_deadline < smallest) {
 			sel = env;
@@ -41,6 +41,7 @@ __attribute__((noreturn)) void schedule(int yield) {
     }
 
     if (sel != NULL) {
+	    sel->env_runtime_left--;
 	    env_run(sel);
     }
 
