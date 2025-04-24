@@ -8,7 +8,11 @@
 #include "error.h"
 
 struct Env envs[NENV] __attribute__((aligned(PAGE_SIZE)));  // All environments
+struct LIST_HEAD(Env_edf_sched_list, Env);
 
+extern struct Env_edf_sched_list env_edf_sched_list; // EDF 调度队列
+
+struct Env *env_create_edf(const void *binary, size_t size, int runtime, int period);
 struct Env *curenv = NULL;             // the current env
 static struct Env_list env_free_list;  // Free list
 
@@ -569,4 +573,16 @@ void envid2env_check() {
     re = envid2env(pe2->env_id, &pe, 1);
     assert(re == -E_BAD_ENV);
     printk("envid2env() work well!\n");
+
+}
+
+struct Env *env_create_edf(const void *binary, size_t size, int runtime, int period) {
+	struct Env *e = env_create(binary, size, 1);
+
+	e->env_edf_runtime = runtime;
+	e->env_edf_period = period;
+	e->env_period_deadline = 0; // 初始化为 0，使进程在首次调用 schedule 函数时触发条件判断，进入首个运行周期
+	e->env_status = ENV_RUNNABLE;
+
+	return e;
 }

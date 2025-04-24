@@ -15,8 +15,34 @@
  *   3. You shouldn't use any 'return' statement because this function is 'noreturn'.
  */
 __attribute__((noreturn)) void schedule(int yield) {
-    static int count = 0;  // remaining time slices of current env
-    struct Env *e = curenv;
+    static int clock = -1;
+    clock++;
+    
+    struct Env * env;
+    LIST_FOREACH (env, &env_edf_sched_list, env_edf_sched_link) {
+	// 在这里对 env 进行操作
+    	if (clock == env->env_period_deadline) {
+		env->env_period_deadline += env->env_edf_period;
+		env->env_runtime_left = env->env_edf_runtime;
+	}
+    }
+
+    int smallest = 100000;
+    struct Env *sel;
+    LIST_FOREACH (env, &env_edf_sched_list, end_edf_sched_link) {
+	if (env->env_runtime_left > 0 && env->env_period_deadline <= smallest) {
+		if (env->env_period_deadline < smallest) {
+			sel = env;
+			smallest = env->env_period_deadline;
+		} else if (env->env_id < sel->env_id) {
+			sel = env;
+		}
+	}
+    }
+
+    if (sel != NULL) {
+	    env_run(sel);
+    }
 
     /* We always decrease the 'count' by 1.
      *
@@ -35,6 +61,10 @@ __attribute__((noreturn)) void schedule(int yield) {
      *   'TAILQ_FIRST', 'TAILQ_REMOVE', 'TAILQ_INSERT_TAIL'
      */
     /* Exercise 3.12: Your code here. */
+    static struct Env * lastRR = NULL;	
+    static int count = 0;  // remaining time slices of current env
+    struct Env *e = lastRR;
+
     if (yield || --count == 0 || e == NULL || e->env_status != ENV_RUNNABLE) {
         if (e != NULL && e->env_status == ENV_RUNNABLE) {
             TAILQ_REMOVE(&env_sched_list, e, env_sched_link);
@@ -46,6 +76,6 @@ __attribute__((noreturn)) void schedule(int yield) {
         }
         count = e->env_pri;
     }
-
+    lastRR = e;
     env_run(e);
 }
