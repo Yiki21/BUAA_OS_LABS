@@ -27,7 +27,7 @@ __attribute__((noreturn)) void schedule(int yield) {
 	}
     }
 
-    int smallest = 100000;
+    int smallest = 10000000;
     struct Env *sel = NULL;
     LIST_FOREACH (env, &env_edf_sched_list, env_edf_sched_link) {
 	if (env->env_runtime_left > 0 && env->env_period_deadline <= smallest) {
@@ -40,9 +40,15 @@ __attribute__((noreturn)) void schedule(int yield) {
 	}
     }
 
-    if (sel != NULL) {
+    
+    static struct Env * lastRR = NULL;	 
+    static int count = 0;  // remaining time slices of current env
+    struct Env *e = lastRR;
+
+    if (sel != NULL) { 
 	    sel->env_runtime_left--;
 	    env_run(sel);
+	    return;
     }
 
     /* We always decrease the 'count' by 1.
@@ -62,9 +68,6 @@ __attribute__((noreturn)) void schedule(int yield) {
      *   'TAILQ_FIRST', 'TAILQ_REMOVE', 'TAILQ_INSERT_TAIL'
      */
     /* Exercise 3.12: Your code here. */
-    static struct Env * lastRR = NULL;	
-    static int count = 0;  // remaining time slices of current env
-    struct Env *e = lastRR;
 
     if (yield || --count == 0 || e == NULL || e->env_status != ENV_RUNNABLE) {
         if (e != NULL && e->env_status == ENV_RUNNABLE) {

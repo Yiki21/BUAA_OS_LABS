@@ -575,13 +575,18 @@ void envid2env_check() {
 }
 
 struct Env *env_create_edf(const void *binary, size_t size, int runtime, int period) {
-	struct Env *e = env_create(binary, size, 0);
+	 struct Env *e;
+    if (env_alloc(&e, 0) == -E_NO_FREE_ENV) {
+        panic("env_create: no free env");
+        return NULL;
+    }
+    e->env_pri = 0;
+    load_icode(e, binary, size);
 
 	e->env_edf_runtime = runtime;
 	e->env_edf_period = period;
 	e->env_period_deadline = 0; // 初始化为 0，使进程在首次调用 schedule 函数时触发条件判断，进入首个运行周期
 	e->env_status = ENV_RUNNABLE;
-	e->env_runtime_left = runtime;
-
+	LIST_INSERT_HEAD(&env_edf_sched_list, (e), env_edf_sched_link); 
 	return e;
 }
