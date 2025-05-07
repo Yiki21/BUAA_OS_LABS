@@ -1,0 +1,16 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-I../include",
+      "-Iinclude",
+      "-c",
+      "-o",
+      "lib/entry.o",
+      "lib/entry.S"
+    ],
+    "directory": "/home/yiki/Dev/OS_Lab/user",
+    "file": "/home/yiki/Dev/OS_Lab/user/lib/entry.S",
+    "output": "/home/yiki/Dev/OS_Lab/user/lib/entry.o"
+  }
+]

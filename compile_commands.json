@@ -10,8 +10,23 @@
       "bintoc",
       "bintoc.c"
     ],
-    "directory": "/home/zhangyi/dev/OS_Lab/23371544/tools",
-    "file": "/home/zhangyi/dev/OS_Lab/23371544/tools/bintoc.c",
-    "output": "/home/zhangyi/dev/OS_Lab/23371544/tools/bintoc"
+    "directory": "/home/yiki/Dev/OS_Lab/tools",
+    "file": "/home/yiki/Dev/OS_Lab/tools/bintoc.c",
+    "output": "/home/yiki/Dev/OS_Lab/tools/bintoc"
+  },
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-c",
+      "--std=gnu99",
+      "-O2",
+      "-Wall",
+      "-o",
+      "fsformat",
+      "fsformat.c"
+    ],
+    "directory": "/home/yiki/Dev/OS_Lab/tools",
+    "file": "/home/yiki/Dev/OS_Lab/tools/fsformat.c",
+    "output": "/home/yiki/Dev/OS_Lab/tools/fsformat"
   }
 ]
