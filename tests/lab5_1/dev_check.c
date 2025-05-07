@@ -103,39 +103,48 @@ int main() {
 		user_panic(
 		    "failed dev address test, maybe you should check the length in sys_write_dev");
 	}
+	//debugf("dev address is ok\n"); ---
 
 	if (syscall_write_dev(&c, 0x14ffffff, 1) != -3) {
 		user_panic("failed dev address test, maybe you can recheck your address validation "
 			   "checking");
 	}
+	//debugf("dev address is ok\n");
 	if (syscall_write_dev(&c, 0x15000200, 1) != -3) {
 		user_panic("failed dev address test, maybe you can recheck your address validation "
 			   "checking");
 	}
+	//debugf("dev address is ok\n");--
 	if (syscall_write_dev(&c, 0x150001ff, 8) != -3) {
 		user_panic(
 		    "failed dev address test, maybe you should check the length in sys_write_dev");
 	}
+	//debugf("dev address is ok\n"); --
 	if (syscall_write_dev(&c, MALTA_IDE_DEVICE, 4) != -3) {
 		user_panic("failed dev address test, maybe you can recheck your address validation "
 			   "checking");
 	}
+	//debugf("dev address is ok\n");
 	if (syscall_write_dev(&c, MALTA_IDE_DEVICE + 0xf, 4) != -3) {
 		user_panic("failed dev address test, maybe you can recheck your address validation "
 			   "checking");
 	}
+	//debugf("dev address is ok\n");
 	if (syscall_write_dev(&c, MALTA_SERIAL_BASE, 0x1f) != -3) {
 		user_panic(
 		    "failed dev address test, maybe you should check the length in sys_write_dev");
 	}
+	//debugf("dev address is ok\n");
 	if (syscall_write_dev(&c, MALTA_SERIAL_BASE + 0x1f, 4) != -3) {
 		user_panic("failed dev address test, maybe you can recheck your address validation "
 			   "checking");
 	}
+	//debugf("dev address is ok\n");
 	if (syscall_write_dev(&c, MALTA_SERIAL_BASE + 0x2f, 4) != -3) {
 		user_panic("failed dev address test, maybe you can recheck your address validation "
 			   "checking");
 	}
+	//debugf("dev address is ok\n");
 
 	if (syscall_write_dev(&c, MALTA_IDE_BASE, 3) != -3) {
 		user_panic(
