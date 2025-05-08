@@ -621,6 +621,10 @@ void *syscall_table[MAX_SYSNO] = {
     [SYS_cgetc] = sys_cgetc,
     [SYS_write_dev] = sys_write_dev,
     [SYS_read_dev] = sys_read_dev,
+	[SYS_shm_new] = sys_shm_new,
+	[SYS_shm_bind] = sys_shm_bind,
+	[SYS_shm_unbind] = sys_shm_unbind,
+	[SYS_shm_free] = sys_shm_free,
 };
 
 /* Overview:
