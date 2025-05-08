@@ -530,12 +530,17 @@ int sys_shm_new(u_int npage) {
 			for (j = 0; j < npage; j++) {
 				int r;
 				if ((r = page_alloc(&shm_pool[i].pages[j])) != 0) {
-					goto err;
+					for (; j >= 0; j--) {
+						shm_pool[i].pages[j]->pp_ref--;
+						page_free(shm_pool[i].pages[j]);
+					}
+					return -E_NO_MEM;
 				}
 				shm_pool[i].pages[j]->pp_ref++;
 			}
 		}
 	}
+
 	if (flag) {
 		shm_pool[i].npage = npage;
 		return 0;
@@ -543,13 +548,7 @@ int sys_shm_new(u_int npage) {
 	else
 		return -E_SHM_INVALID;
 	
-
-	err:
-	for (; j >= 0; j--) {
-		shm_pool[i].pages[j]->pp_ref--;
-		page_free(shm_pool[i].pages[j]);
-	}
-	return -E_NO_MEM;
+	
 }
 
 int sys_shm_bind(int key, u_int va, u_int perm) {
@@ -596,8 +595,10 @@ int sys_shm_free(int key) {
 		return -E_SHM_NOT_OPEN;
 	
 	for (int i = 0; i < shm_pool[key].npage; i++) {
+		shm_pool[key].pages[i]->pp_ref--;
 		page_free(shm_pool[key].pages[i]);
 	}
+	shm_pool[key].npage = 0;
 
 	return 0;
 }
