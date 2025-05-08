@@ -543,6 +543,7 @@ int sys_shm_new(u_int npage) {
 
 	if (flag) {
 		shm_pool[i].npage = npage;
+		shm_pool[i].open = 1;
 		return 0;
 	}
 	else
@@ -598,6 +599,7 @@ int sys_shm_free(int key) {
 		shm_pool[key].pages[i]->pp_ref--;
 		page_free(shm_pool[key].pages[i]);
 	}
+	shm_pool[key].open = 0;
 	shm_pool[key].npage = 0;
 
 	return 0;
