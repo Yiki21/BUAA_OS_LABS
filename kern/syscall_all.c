@@ -530,6 +530,7 @@ int sys_shm_new(u_int npage) {
 			for (j = 0; j < npage; j++) {
 				if (page_alloc(&shm_pool[i].pages[j]) != 0) {
 					j--;
+					debugf("jjdieqi\n");
 					for (; j >= 0; j--) {
 						page_free(shm_pool[i].pages[j]);
 					}

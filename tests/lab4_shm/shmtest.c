@@ -4,7 +4,6 @@ int main() {
 	volatile char *va1 = (char *)0x500000;
 	volatile char *va2 = (char *)0x600000;
 	int key = shm_new(2);
-	debugf("oppp\n");
 
 	shm_bind(key, (void *)va1);
 	shm_bind(key, (void *)va2);
