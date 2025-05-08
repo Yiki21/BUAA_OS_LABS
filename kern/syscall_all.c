@@ -536,6 +536,7 @@ int sys_shm_new(u_int npage) {
 					return -E_NO_MEM;
 				}
 			}
+			break;
 		}
 	}
 
