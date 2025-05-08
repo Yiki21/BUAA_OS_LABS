@@ -564,7 +564,7 @@ int sys_shm_bind(int key, u_int va, u_int perm) {
 
 	for (int i = 0; i < shm_pool[key].npage; i++) {
 		page_insert(curenv->env_pgdir, curenv->env_asid, 
-				shm_pool[key].pages[j], va + i * PAGE_SIZE, perm);
+				shm_pool[key].pages[i], va + i * PAGE_SIZE, perm);
 	}
 
 	return 0;
