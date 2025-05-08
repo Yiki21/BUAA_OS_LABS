@@ -527,14 +527,14 @@ int sys_shm_new(u_int npage) {
 	for (i = 0; i < N_SHM; i++) {
 		if (shm_pool[i].open == 0) {
 			flag = 1;
-			for (j = 0; j < npage; j++) {
-				if (page_alloc(&shm_pool[i].pages[j]) != 0) {
-					j--;
-					for (; j >= 0; j--) {
-						page_free(shm_pool[i].pages[j]);
-					}
-					return -E_NO_MEM;
-				}
+			//for (j = 0; j < npage; j++) {
+			//	if (page_alloc(&shm_pool[i].pages[j]) != 0) {
+			//		j--;
+			//		for (; j >= 0; j--) {
+			//			page_free(shm_pool[i].pages[j]);
+			//		}
+			//		return -E_NO_MEM;
+			//	}
 			}
 		}
 	}
@@ -563,7 +563,6 @@ int sys_shm_bind(int key, u_int va, u_int perm) {
 	if (shm_pool[key].open == 0)
 		return -E_SHM_NOT_OPEN;
 
-	// va = ROUNDDOWN(va);
 	for (int i = 0; i < shm_pool[key].npage; i++) {
 		page_insert(curenv->env_pgdir, curenv->env_asid, 
 				shm_pool[key].pages[i], va + i * PAGE_SIZE, perm);
