@@ -531,6 +531,7 @@ void *syscall_table[MAX_SYSNO] = {
     [SYS_cgetc] = sys_cgetc,
     [SYS_write_dev] = sys_write_dev,
     [SYS_read_dev] = sys_read_dev,
+    [SYS_get_ppid] = sys_get_ppid,
 };
 
 /* Overview:
@@ -574,4 +575,9 @@ void do_syscall(struct Trapframe *tf) {
 	 */
 	/* Exercise 4.2: Your code here. (4/4) */
 	tf->regs[2] = func(arg1, arg2, arg3, arg4, arg5);
+}
+
+
+int sys_get_ppid(void) {
+	return curent->env_parent_id;
 }
