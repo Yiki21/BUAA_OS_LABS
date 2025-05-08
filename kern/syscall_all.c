@@ -5,6 +5,10 @@
 #include <printk.h>
 #include <sched.h>
 #include <syscall.h>
+#include <shm.h>
+
+struct Shm shm_pool[N_SHM];
+
 
 extern struct Env *curenv;
 
@@ -510,6 +514,92 @@ int sys_read_dev(u_int va, u_int pa, u_int len) {
 	/* Exercise 5.1: Your code here. (2/2) */
 
 	return 0;
+}
+
+int sys_shm_new(u_int npage) {
+	if (npage == 0 || npage > N_SHM_PAGE) {
+		return -E_SHM_INVALID;
+	}
+
+	// Lab4-Extra: Your code here. (5/8)
+	int i, j;
+	int flag = 0;
+	for (i = 0; i < N_SHM; i++) {
+		if (shm_pool[i].open == 0) {
+			flag = 1;
+			for (j = 0; j < npage; j++) {
+				int r;
+				if ((r = page_alloc(&shm_pool[i].pages[j])) != 0) {
+					goto err;
+				}
+				shm_pool[i].pages[j].pp_ref++;
+			}
+		}
+	}
+	if (flag) {
+		shm_pool[i].npage = npage;
+		return 0;
+	}
+	else
+		return -E_SHM_INVALID;
+	
+
+	err:
+	for (; j >= 0; j--) {
+		shm_pool[i].pages[j].pp_ref--;
+		page_free(shm_pool[i].pages[j]);
+	}
+	return -E_NO_MEM;
+}
+
+int sys_shm_bind(int key, u_int va, u_int perm) {
+	if (key < 0 || key >= N_SHM) {
+		return -E_SHM_INVALID;
+	}
+
+	// Lab4-Extra: Your code here. (6/8)
+	//page_insert(dstenv->env_pgdir, dstenv->env_asid, pp, dstva, perm);
+	if (shm_pool[key].open == 0)
+		return -E_SHM_NOT_OPEN;
+
+	for (int i = 0; i < shm_pool[key].npage; i++) {
+		page_insert(curenv->env_pgdir, curenv->env_asid, 
+				shm_pool[key].pages[j], va + i * PAGE_SIZE, perm);
+	}
+
+	return 0;
+}
+
+int sys_shm_unbind(int key, u_int va) {
+	if (key < 0 || key >= N_SHM) {
+		return -E_SHM_INVALID;
+	}
+
+	// Lab4-Extra: Your code here. (7/8)
+	if (shm_pool[key].open == 0)
+		return -E_SHM_NOT_OPEN;
+
+	for (int i = 0; i < shm_pool[key].npage; i++) {
+		page_remove(curenv->env_pgdir, curenv->env_asid, va + i * PAGE_SIZE);
+	}
+
+	return ??;
+}
+
+int sys_shm_free(int key) {
+	if (key < 0 || key >= N_SHM) {
+		return -E_SHM_INVALID;
+	}
+
+	// Lab4-Extra: Your code here. (8/8)
+	if (shm_pool[key].open == 0) 
+		return -E_SHM_NOT_OPEN;
+	
+	for (int i = 0; i < shm_pool[key].npage; i++) {
+		page_free(shm_pool[key].pages[i]);
+	}
+
+	return ??;
 }
 
 void *syscall_table[MAX_SYSNO] = {
