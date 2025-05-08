@@ -529,10 +529,9 @@ int sys_shm_new(u_int npage) {
 			flag = 1;
 			for (j = 0; j < npage; j++) {
 				int r;
-				shm_pool[i].pages[j]->pp_ref++;
 				if ((r = page_alloc(&shm_pool[i].pages[j])) != 0) {
+					j--
 					for (; j >= 0; j--) {
-						shm_pool[i].pages[j]->pp_ref--;
 						page_free(shm_pool[i].pages[j]);
 					}
 					return -E_NO_MEM;
@@ -542,6 +541,9 @@ int sys_shm_new(u_int npage) {
 	}
 
 	if (flag) {
+		for (j = 0; j < npage; j++) {
+			shm_pool[i].pages[j]->pp_ref++;
+		}
 		shm_pool[i].npage = npage;
 		shm_pool[i].open = 1;
 		return i;
