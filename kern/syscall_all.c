@@ -532,7 +532,7 @@ int sys_shm_new(u_int npage) {
 				if ((r = page_alloc(&shm_pool[i].pages[j])) != 0) {
 					goto err;
 				}
-				shm_pool[i].pages[j].pp_ref++;
+				shm_pool[i].pages[j]->pp_ref++;
 			}
 		}
 	}
@@ -546,7 +546,7 @@ int sys_shm_new(u_int npage) {
 
 	err:
 	for (; j >= 0; j--) {
-		shm_pool[i].pages[j].pp_ref--;
+		shm_pool[i].pages[j]->pp_ref--;
 		page_free(shm_pool[i].pages[j]);
 	}
 	return -E_NO_MEM;
@@ -583,7 +583,7 @@ int sys_shm_unbind(int key, u_int va) {
 		page_remove(curenv->env_pgdir, curenv->env_asid, va + i * PAGE_SIZE);
 	}
 
-	return ??;
+	return 0;
 }
 
 int sys_shm_free(int key) {
@@ -599,7 +599,7 @@ int sys_shm_free(int key) {
 		page_free(shm_pool[key].pages[i]);
 	}
 
-	return ??;
+	return 0;
 }
 
 void *syscall_table[MAX_SYSNO] = {
