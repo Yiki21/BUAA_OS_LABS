@@ -544,7 +544,7 @@ int sys_shm_new(u_int npage) {
 	if (flag) {
 		shm_pool[i].npage = npage;
 		shm_pool[i].open = 1;
-		return 0;
+		return i;
 	}
 	else
 		return -E_SHM_INVALID;
