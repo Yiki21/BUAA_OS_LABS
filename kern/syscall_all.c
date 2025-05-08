@@ -527,15 +527,15 @@ int sys_shm_new(u_int npage) {
 	for (i = 0; i < N_SHM; i++) {
 		if (shm_pool[i].open == 0) {
 			flag = 1;
-			//for (j = 0; j < npage; j++) {
-			//	if (page_alloc(&shm_pool[i].pages[j]) != 0) {
-			//		j--;
-			//		for (; j >= 0; j--) {
-			//			page_free(shm_pool[i].pages[j]);
-			//		}
-			//		return -E_NO_MEM;
-			//	}
-			//}
+			for (j = 0; j < npage; j++) {
+				if (page_alloc(&shm_pool[i].pages[j]) != 0) {
+					j--;
+					for (; j >= 0; j--) {
+						page_free(shm_pool[i].pages[j]);
+					}
+					return -E_NO_MEM;
+				}
+			}
 		}
 	}
 
