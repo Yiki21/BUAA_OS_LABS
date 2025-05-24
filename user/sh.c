@@ -91,8 +91,12 @@ int parsecmd(char **argv, int *rightpipe) {
 			// utilize 'debugf' to print relevant messages,
 			// and subsequently terminate the process using 'exit'.
 			/* Exercise 6.5: Your code here. (1/3) */
-
-			user_panic("< redirection not implemented");
+			if ((fd = open(t, O_RDONLY)) < 0) {
+				debugf("open %s: %d\n", t, fd);
+				exit();
+			}
+			dup(fd, 0);
+			close(fd);
 
 			break;
 		case '>':
@@ -106,8 +110,12 @@ int parsecmd(char **argv, int *rightpipe) {
 			// utilize 'debugf' to print relevant messages,
 			// and subsequently terminate the process using 'exit'.
 			/* Exercise 6.5: Your code here. (2/3) */
-
-			user_panic("> redirection not implemented");
+			if ((fd = open(t, O_WRONLY | O_CREAT | O_TRUNC)) < 0) {
+				debugf("open %s: %d\n", t, fd);
+				exit();
+			}
+			dup(fd, 1);
+			close(fd);
 
 			break;
 		case '|':;
@@ -128,8 +136,27 @@ int parsecmd(char **argv, int *rightpipe) {
 			 */
 			int p[2];
 			/* Exercise 6.5: Your code here. (3/3) */
-
-			user_panic("| not implemented");
+			if ((r = pipe(p)) < 0) {
+				debugf("pipe: %d\n", r);
+				exit();
+			}
+			*rightpipe = fork();
+			if (*rightpipe < 0) {
+				exit();
+			}
+			if (*rightpipe == 0) {
+				// Child process
+				dup(p[0], 0); // dup read end to fd 0
+				close(p[0]); // close read end
+				close(p[1]); // close write end
+				return parsecmd(argv, rightpipe);
+			} else {
+				// Parent process
+				dup(p[1], 1); // dup write end to fd 1
+				close(p[1]); // close write end
+				close(p[0]); // close read end
+				return argc; // return argc to execute the left side of the pipeline
+			}
 
 			break;
 		}

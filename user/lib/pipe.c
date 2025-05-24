@@ -107,6 +107,11 @@ static int _pipe_is_closed(struct Fd *fd, struct Pipe *p) {
 	// Keep retrying until 'env->env_runs' is unchanged before and after
 	// reading the reference counts.
 	/* Exercise 6.1: Your code here. (1/3) */
+	do {
+		runs = env->env_runs;
+		fd_ref = pageref(fd);
+		pipe_ref = pageref(p);
+	} while (runs != env->env_runs);
 
 	return fd_ref == pipe_ref;
 }
@@ -137,8 +142,25 @@ static int pipe_read(struct Fd *fd, void *vbuf, u_int n, u_int offset) {
 	//    of bytes read so far.
 	//  - Otherwise, keep yielding until the buffer isn't empty or the pipe is closed.
 	/* Exercise 6.1: Your code here. (2/3) */
-
-	user_panic("pipe_read not implemented");
+	p = (struct Pipe *)fd2data(fd);
+	rbuf = (char *)vbuf;
+	for (i = 0; i < n; i++) {
+		// If the read position equals to the write position, the pipe is empty.
+		if (p->p_rpos == p->p_wpos) {
+			// If the pipe is closed, return the number of bytes read so far.
+			if (_pipe_is_closed(fd, p)) {
+				return i;
+			}
+			// Otherwise, yield until the pipe isn't empty.
+			syscall_yield();
+			i--;
+			continue;
+		}
+		// Read one byte from the pipe buffer.
+		rbuf[i] = p->p_buf[p->p_rpos % PIPE_SIZE];
+		p->p_rpos++;
+	}
+	return n;
 }
 
 /* Overview:
@@ -166,8 +188,24 @@ static int pipe_write(struct Fd *fd, const void *vbuf, u_int n, u_int offset) {
 	//  - If the pipe isn't closed, keep yielding until the buffer isn't full or the
 	//    pipe is closed.
 	/* Exercise 6.1: Your code here. (3/3) */
-
-	user_panic("pipe_write not implemented");
+	p = (struct Pipe *)fd2data(fd);
+	wbuf = (char *)vbuf;
+	for (i = 0; i < n; i++) {
+		// If the write position equals to the read position plus PIPE_SIZE, the pipe is full.
+		if (p->p_wpos - p->p_rpos >= PIPE_SIZE) {
+			// If the pipe is closed, return the number of bytes written so far.
+			if (_pipe_is_closed(fd, p)) {
+				return i;
+			}
+			// Otherwise, yield until the pipe isn't full.
+			syscall_yield();
+			i--;
+			continue;
+		}
+		// Write one byte to the pipe buffer.
+		p->p_buf[p->p_wpos % PIPE_SIZE] = wbuf[i];
+		p->p_wpos++;
+	}
 
 	return n;
 }
@@ -209,8 +247,8 @@ int pipe_is_closed(int fdnum) {
  */
 static int pipe_close(struct Fd *fd) {
 	// Unmap 'fd' and the referred Pipe.
-	syscall_mem_unmap(0, (void *)fd2data(fd));
 	syscall_mem_unmap(0, fd);
+	syscall_mem_unmap(0, (void *)fd2data(fd));
 	return 0;
 }
 
