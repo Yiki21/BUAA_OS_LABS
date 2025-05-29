@@ -839,7 +839,7 @@ int traverse_file(const char *path, struct File *file, const char *name, struct 
 	if (strcmp(path, name) == 0) {
 		/*增加 res->count*/
 		/*添加 res 的路径*/
-		debugf("opop\n");
+		//debugf("opop\n");
 		res->count++;
 		strcpy(res->file_path[res->count], path);
 	}
@@ -857,7 +857,7 @@ int traverse_file(const char *path, struct File *file, const char *name, struct 
 				strcpy(curpath + len, name);
 				len = strlen(curpath);
 				curpath[len] = '\0';
-				//debugf("OOHHH\n");
+				debugf("curpath: %s", curpath);
 				// 提示：我们没有实现 strcat 工具函数，你可以用 strcpy 实现拼接
 				// 4. 递归调用 traverse_file 函数
 				traverse_file(curpath, f, name, res);
