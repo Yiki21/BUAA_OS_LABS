@@ -855,6 +855,8 @@ int traverse_file(const char *path, struct File *file, const char *name, struct 
 				// 3. 把 path 和 name 拼接起来得到下一层文件路径，注意结尾的 '\0'
 				strcpy(curpath, path);
 				int len = strlen(curpath);
+				curpath[len] = '/';
+				curpath[len + 1] = '\0';
 				strcpy(curpath + len, f->f_name);
 				len = strlen(curpath);
 				curpath[len] = '\0';
