@@ -874,11 +874,11 @@ int find_files(const char *path, const char *name, struct Find_res *res) {
         // Lab5-Exam: Your code here. (1/2)
 		//int walk_path(char *path, struct File **pdir, struct File **pfile, char *lastelem) {
 		int r;
-		if ((r = walk_path(path, &file, NULL, NULL)) != 0) {
+		if ((r = walk_path(path, NULL, &file, NULL)) != 0) {
 			return r;
 		}
 		//debugf("BBBBBB: %s : %s\n", path, name);
-
+		debugf("%s\n", file->f_name);
         // 在 path 对应的文件夹下面遍历，找到所有名字为 name 的文件，你可以调用下面的参考函数 traverse_file
         // Lab5-Exam: Your code here. (2/2)
 		//int traverse_file(const char *path, struct File *file, const char *name, struct Find_res *res) {
