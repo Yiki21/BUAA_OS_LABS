@@ -836,6 +836,7 @@ int traverse_file(const char *path, struct File *file, const char *name, struct 
 	}
 
 	// 2. 比较当前文件名是否等于 name，如果相等则更改 res
+	path = skip_slash(path);
 	if (strcmp(path, name) == 0) {
 		/*增加 res->count*/
 		/*添加 res 的路径*/
