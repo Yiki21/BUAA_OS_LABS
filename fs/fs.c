@@ -840,7 +840,7 @@ int traverse_file(const char *path, struct File *file, const char *name, struct 
 		/*增加 res->count*/
 		/*添加 res 的路径*/
 		res->count++;
-		res->file_path[res->count] = path;
+		res->file_path[res->count] = (char*)path;
 	}
 	if (file->f_type == FTYPE_DIR) {
 		for (int i = 0; i < nblock; i++) {
@@ -868,16 +868,15 @@ int find_files(const char *path, const char *name, struct Find_res *res) {
         // 用 walk_path 来找到 path 对应的文件夹
         // Lab5-Exam: Your code here. (1/2)
 		//int walk_path(char *path, struct File **pdir, struct File **pfile, char *lastelem) {
-		struct File *dir;
 		int r;
-		if ((r = walk_path(path, NULL, &dir, NULL)) != 0) {
+		if ((r = walk_path(path, NULL, &file, NULL)) != 0) {
 			return r;
 		}
 
         // 在 path 对应的文件夹下面遍历，找到所有名字为 name 的文件，你可以调用下面的参考函数 traverse_file
         // Lab5-Exam: Your code here. (2/2)
 		//int traverse_file(const char *path, struct File *file, const char *name, struct Find_res *res) {
-		r = traverse_file(path, dir, name, res);
+		r = traverse_file(path, file, name, res);
 		return r;
 }
 
