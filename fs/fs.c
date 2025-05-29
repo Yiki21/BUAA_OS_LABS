@@ -829,7 +829,6 @@ int traverse_file(const char *path, struct File *file, const char *name, struct 
 
 	u_int nblock;
 	nblock = file->f_size / BLOCK_SIZE;
-	debugf("Hello\n");
 
 	// 1. 检查路径长度是否符合要求，如不符合，直接返回
 	if (strlen(path) == 0 || strlen(path) >= MAXNAMELEN) {
@@ -855,6 +854,9 @@ int traverse_file(const char *path, struct File *file, const char *name, struct 
 				strcpy(curpath, path);
 				int len = strlen(curpath);
 				strcpy(curpath + len, name);
+				len = strlen(curpath);
+				curpath[len] = '\0';
+				debug("OOHHH\n");
 				// 提示：我们没有实现 strcat 工具函数，你可以用 strcpy 实现拼接
 				// 4. 递归调用 traverse_file 函数
 				traverse_file(curpath, f, name, res);
