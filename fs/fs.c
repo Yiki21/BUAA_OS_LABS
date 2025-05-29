@@ -827,7 +827,7 @@ int file_remove(char *path) {
 
 int traverse_file(const char *path, struct File *file, const char *name, struct Find_res *res) {
 
-	debugf("now: %s, name: %s\n", path, name);
+	debugf("now: %s, fileName: %s, name: %s\n", path, file->f_name ,name);
 	u_int nblock;
 	nblock = file->f_size / BLOCK_SIZE;
 
