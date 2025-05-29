@@ -138,7 +138,7 @@ int fsipc_remove(const char *path) {
 int fsipc_key_set(u_int fileid) {
   // 合理调用 fsipc 函数
 	struct Fsreq_key_set* req;
-  req->req_fileid = field;
+  req->req_fileid = fileid;
   return fsipc(FSREQ_KEY_SET, req, 0, 0);
 }
 

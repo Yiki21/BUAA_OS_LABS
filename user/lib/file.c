@@ -300,6 +300,6 @@ int fskey_unset() {
 
 int fskey_isset() {
   // 合理调用相应文件系统 IPC 函数
-	return fskey_isset();
+	return fsipc_key_isset();
 }
 
