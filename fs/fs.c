@@ -870,6 +870,7 @@ int find_files(const char *path, const char *name, struct Find_res *res) {
 		//int walk_path(char *path, struct File **pdir, struct File **pfile, char *lastelem) {
 		int r;
 		if ((r = walk_path(path, NULL, &file, NULL)) != 0) {
+			debugf("NO\n");
 			return r;
 		}
 
