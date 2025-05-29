@@ -58,6 +58,50 @@ void serve_init(void) {
 	}
 }
 
+static int encrypt_key_set = 0;
+static unsigned char encrypt_key[BLOCK_SIZE];
+
+void serve_key_set(u_int envid, struct Fsreq_key_set *rq) {
+  // 判断当前状态是否已加载密钥，如果已加载密钥， IPC 返回 -E_BAD_KEY
+	if (serve_key_isset(envid)) 
+		return -E_BAD_KEY;
+  // 利用 open_lookup 找到对应的 Open 结构体，判断文件大小是否至少有两个磁盘块大小
+  // 利用 file_get_block 读取文件的第一个磁盘块，判断第一个字是否为 FS_MAGIC
+  // 如果密钥文件不合法， IPC 返回 -E_INVALID_KEY_FILE
+  // int open_lookup(u_int envid, u_int fileid, struct Open **po)
+  	struct Open *open;
+	try (open_lookup(envid, rq->req_fileid, &open));
+	void *blk;
+	try (file_get_block(open->o_file, 0, &blk));
+	if (*(uint32_t *) blk  != FS_MAGIC)
+		return -E_INVALID_KEY_FILE;
+  // 利用 file_get_block 读取文件的第二个磁盘块，将密钥复制到 encrypt_key 中
+	// if ((r = file_get_block(pOpen->o_file, filebno, &blk)) < 0)
+  // 将当前状态标记为已加载密钥
+	try (file_get_block(open->o_file, 1, &blk));
+	memcpy(encrypt_key, blk, BLOCK_SIZE);
+	encrypt_key_set = 1;
+  // IPC 返回 0
+	ipc_send(envid, 0, 0, 0);
+}
+
+void serve_key_unset(u_int envid) {
+  // 判断当前状态是否已加载密钥，如果未加载密钥， IPC 返回 -E_BAD_KEY
+	if (!serve_key_isset())
+		return -E_BAD_KEY;
+  // 将当前状态标记为未加载密钥
+	encrypt_key_set = 0;
+  // 将密钥缓存 encrypt_key 清零
+	memset(encrypt_key, 0, BLOCK_SIZE);
+  // IPC 返回 0
+	ipc_send(envid, 0, 0, 0);
+}
+
+void serve_key_isset(u_int envid) {
+  // IPC 返回当前状态
+	return encrypt_key_set;
+}
+
 /*
  * Overview:
  *  Allocate an open file.
@@ -212,7 +256,7 @@ int is_encrypt_open(int oMode) {
 void serve_map(u_int envid, struct Fsreq_map *rq) {
 	struct Open *pOpen;
 	u_int filebno;
-	void *blk;
+	char *blk;
 	int r;
 
 	if ((r = open_lookup(envid, rq->req_fileid, &pOpen)) < 0) {
@@ -308,7 +352,7 @@ void serve_close(u_int envid, struct Fsreq_close *rq) {
 
 	if (is) {
 		int conut = ROUND(pOpen->o_file->f_size / BLOCK_SIZE);
-		void *blk;
+		char *blk;
 		for (int i = 0; i < conut; i++) {
 			file_get_block(pOpen->o_file, i, &blk);
 			for (int j = 0 ; < BLOCK_SIZE; j++) {
@@ -384,49 +428,7 @@ void serve_sync(u_int envid) {
 	ipc_send(envid, 0, 0, 0);
 }
 
-static int encrypt_key_set = 0;
-static unsigned char encrypt_key[BLOCK_SIZE];
 
-void serve_key_set(u_int envid, struct Fsreq_key_set *rq) {
-  // 判断当前状态是否已加载密钥，如果已加载密钥， IPC 返回 -E_BAD_KEY
-	if (serve_key_isset(envid)) 
-		return -E_BAD_KEY;
-  // 利用 open_lookup 找到对应的 Open 结构体，判断文件大小是否至少有两个磁盘块大小
-  // 利用 file_get_block 读取文件的第一个磁盘块，判断第一个字是否为 FS_MAGIC
-  // 如果密钥文件不合法， IPC 返回 -E_INVALID_KEY_FILE
-  // int open_lookup(u_int envid, u_int fileid, struct Open **po)
-  	struct Open *open;
-	try (open_lookup(envid, rq->req_fileid, &open));
-	void *blk;
-	try (file_get_block(open->o_file, 0, &blk));
-	if (*(uint32_t *) blk  != FS_MAGIC)
-		return -E_INVALID_KEY_FILE;
-  // 利用 file_get_block 读取文件的第二个磁盘块，将密钥复制到 encrypt_key 中
-	// if ((r = file_get_block(pOpen->o_file, filebno, &blk)) < 0)
-  // 将当前状态标记为已加载密钥
-	try (file_get_block(open->o_file, 1, &blk));
-	memcpy(encrypt_key, blk, BLOCK_SIZE);
-	encrypt_key_set = 1;
-  // IPC 返回 0
-	ipc_send(envid, 0, 0, 0);
-}
-
-void serve_key_unset(u_int envid) {
-  // 判断当前状态是否已加载密钥，如果未加载密钥， IPC 返回 -E_BAD_KEY
-	if (!serve_key_isset())
-		return -E_BAD_KEY;
-  // 将当前状态标记为未加载密钥
-	encrypt_key_set = 0;
-  // 将密钥缓存 encrypt_key 清零
-	memset(encrypt_key, 0, BLOCK_SIZE);
-  // IPC 返回 0
-	ipc_send(envid, 0, 0, 0);
-}
-
-void serve_key_isset(u_int envid) {
-  // IPC 返回当前状态
-	return encrypt_key_set;
-}
 
 /*
  * The serve function table
