@@ -860,7 +860,8 @@ int traverse_file(const char *path, struct File *file, const char *name, struct 
 				curpath[len + 1] = '\0';
 				strcpy(curpath + len, f->f_name);
 				len = strlen(curpath);
-				curpath[len] = '\0';
+				curpath[len] = '/';
+				curpath[len + 1] = '\0';
 				// 提示：我们没有实现 strcat 工具函数，你可以用 strcpy 实现拼接
 				// 4. 递归调用 traverse_file 函数
 				traverse_file(curpath, f, name, res);
