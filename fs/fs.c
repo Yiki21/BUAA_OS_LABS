@@ -840,7 +840,7 @@ int traverse_file(const char *path, struct File *file, const char *name, struct 
 		/*增加 res->count*/
 		/*添加 res 的路径*/
 		res->count++;
-		res->file_path[res->count] = (char*)path;
+		strcpy(res->file_path[res->count], path);
 	}
 	if (file->f_type == FTYPE_DIR) {
 		for (int i = 0; i < nblock; i++) {
