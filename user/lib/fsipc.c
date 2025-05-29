@@ -134,6 +134,19 @@ int fsipc_remove(const char *path) {
 // Overview:
 //  Ask the file server to update the disk by writing any dirty
 //  blocks in the buffer cache.
-int fsipc_sync(void) {
-	return fsipc(FSREQ_SYNC, fsipcbuf, 0, 0);
+/* user/lib/fsipc.c */
+int fsipc_key_set(u_int fileid) {
+  // 合理调用 fsipc 函数
+	struct Fsreq_key_set* req;
+  req->req_fileid = field;
+  return fsipc(FSREQ_KEY_SET, req, 0, 0);
+}
+
+int fsipc_key_unset(void) {
+  return fsipc(FSREQ_KEY_UNSET, NULL, 0 ,0);
+}
+
+int fsipc_key_isset(void) {
+  // 合理调用 fsipc 函数
+	return fsipc(FSREQ_KEY_ISSET, NULL, 0 ,0);
 }

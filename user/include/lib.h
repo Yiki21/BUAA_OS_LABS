@@ -137,4 +137,14 @@ int sync(void);
 #define O_EXCL 0x0400  /* error if already exists */
 #define O_MKDIR 0x0800 /* create directory, not regular file */
 
+int fsipc_key_set(u_int fileid);
+int fsipc_key_unset();
+int fsipc_key_isset();
+
+int fskey_set(int fd);
+int fskey_unset();
+int fskey_isset();
+#define O_ENCRYPT 0x0010
+
+
 #endif

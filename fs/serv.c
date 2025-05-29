@@ -184,6 +184,18 @@ void serve_open(u_int envid, struct Fsreq_open *rq) {
 	ipc_send(envid, 0, o->o_ff, PTE_D | PTE_LIBRARY);
 }
 
+int is_encrypt_open(int oMode) {
+	int origin = oMode ^ O_ENCRYPT;
+	return origin == O_RDONLY 
+	|| origin == O_CREAT 
+	|| origin == O_WRONLY 
+	|| origin == O_RDWR 
+	|| origin == O_ACCMODE 
+	|| origin == O_TRUNC
+	|| origin == O_EXCL
+	|| origin == O_MKDIR;
+}
+
 /*
  * Overview:
  *  Serve to map the file specified by the fileid in `rq`.
@@ -208,6 +220,13 @@ void serve_map(u_int envid, struct Fsreq_map *rq) {
 		return;
 	}
 
+	int is = 0;
+	if (is_encrypt_open(pOpen->o_mode)) {
+		if (!serve_key_isset(envid))
+			ipc_send(envid, -E_BAD_KEY, 0, 0);
+		is = 1;
+	}
+
 	filebno = rq->req_offset / BLOCK_SIZE;
 
 	if ((r = file_get_block(pOpen->o_file, filebno, &blk)) < 0) {
@@ -215,9 +234,21 @@ void serve_map(u_int envid, struct Fsreq_map *rq) {
 		return;
 	}
 
+	if (is) {
+		for (int i = 0 ;i < BLOCK_SIZE; i++) {
+			blk[i] ^= encrypt_key[i];
+		}
+	}
+
 	ipc_send(envid, 0, blk, PTE_D | PTE_LIBRARY);
 }
 
+// unsigned char *blk;
+// unsigned char encrypt_key[BLOCK_SIZE];
+
+// for (int i = 0; i < BLOCK_SIZE; i++) {
+//   blk[i] ^= encrypt_key[i];
+// }
 /*
  * Overview:
  *  Serve to set the size of a file specified by the fileid in `rq`.
@@ -266,6 +297,24 @@ void serve_close(u_int envid, struct Fsreq_close *rq) {
 	if ((r = open_lookup(envid, rq->req_fileid, &pOpen)) < 0) {
 		ipc_send(envid, r, 0, 0);
 		return;
+	}
+
+	int is = 0;
+	if (is_encrypt_open(pOpen.o_mode)) {
+		is = 1;
+		if (!serve_key_isset(envid))
+			ipc_send(envid, -E_BAD_KEY, 0, 0);
+	}
+
+	if (is) {
+		int conut = ROUND(pOpen->o_file->f_size / BLOCK_SIZE);
+		void *blk;
+		for (int i = 0; i < conut; i++) {
+			file_get_block(pOpen->o_file, i, &blk);
+			for (int j = 0 ; < BLOCK_SIZE; j++) {
+				blk[j] ^= encrypt_key[j];
+			}
+		}
 	}
 
 	file_close(pOpen->o_file);
@@ -335,6 +384,50 @@ void serve_sync(u_int envid) {
 	ipc_send(envid, 0, 0, 0);
 }
 
+static int encrypt_key_set = 0;
+static unsigned char encrypt_key[BLOCK_SIZE];
+
+void serve_key_set(u_int envid, struct Fsreq_key_set *rq) {
+  // 判断当前状态是否已加载密钥，如果已加载密钥， IPC 返回 -E_BAD_KEY
+	if (serve_key_isset(envid)) 
+		return -E_BAD_KEY;
+  // 利用 open_lookup 找到对应的 Open 结构体，判断文件大小是否至少有两个磁盘块大小
+  // 利用 file_get_block 读取文件的第一个磁盘块，判断第一个字是否为 FS_MAGIC
+  // 如果密钥文件不合法， IPC 返回 -E_INVALID_KEY_FILE
+  // int open_lookup(u_int envid, u_int fileid, struct Open **po)
+  	struct Open *open;
+	try (open_lookup(envid, rq->req_fileid, &open));
+	void *blk;
+	try (file_get_block(open->o_file, 0, &blk));
+	if (*(uint32_t *) blk  != FS_MAGIC)
+		return -E_INVALID_KEY_FILE;
+  // 利用 file_get_block 读取文件的第二个磁盘块，将密钥复制到 encrypt_key 中
+	// if ((r = file_get_block(pOpen->o_file, filebno, &blk)) < 0)
+  // 将当前状态标记为已加载密钥
+	try (file_get_block(open->o_file, 1, &blk));
+	memcpy(encrypt_key, blk, BLOCK_SIZE);
+	encrypt_key_set = 1;
+  // IPC 返回 0
+	ipc_send(envid, 0, 0, 0);
+}
+
+void serve_key_unset(u_int envid) {
+  // 判断当前状态是否已加载密钥，如果未加载密钥， IPC 返回 -E_BAD_KEY
+	if (!serve_key_isset())
+		return -E_BAD_KEY;
+  // 将当前状态标记为未加载密钥
+	encrypt_key_set = 0;
+  // 将密钥缓存 encrypt_key 清零
+	memset(encrypt_key, 0, BLOCK_SIZE);
+  // IPC 返回 0
+	ipc_send(envid, 0, 0, 0);
+}
+
+void serve_key_isset(u_int envid) {
+  // IPC 返回当前状态
+	return encrypt_key_set;
+}
+
 /*
  * The serve function table
  * File system use this table and the request number to
@@ -343,7 +436,9 @@ void serve_sync(u_int envid) {
 void *serve_table[MAX_FSREQNO] = {
     [FSREQ_OPEN] = serve_open,	 [FSREQ_MAP] = serve_map,     [FSREQ_SET_SIZE] = serve_set_size,
     [FSREQ_CLOSE] = serve_close, [FSREQ_DIRTY] = serve_dirty, [FSREQ_REMOVE] = serve_remove,
-    [FSREQ_SYNC] = serve_sync,
+    [FSREQ_SYNC] = serve_sync,[FSREQ_KEY_SET] = serve_key_set,
+  [FSREQ_KEY_UNSET] = serve_key_unset,
+  [FSREQ_KEY_ISSET] = serve_key_isset,
 };
 
 /*
