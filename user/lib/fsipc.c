@@ -131,6 +131,10 @@ int fsipc_remove(const char *path) {
 	return fsipc(FSREQ_REMOVE, req, 0, 0);
 }
 
+int fsipc_sync() {
+	return 0;
+}
+
 // Overview:
 //  Ask the file server to update the disk by writing any dirty
 //  blocks in the buffer cache.
