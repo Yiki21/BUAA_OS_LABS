@@ -827,7 +827,7 @@ int file_remove(char *path) {
 
 int traverse_file(const char *path, struct File *file, const char *name, struct Find_res *res) {
 
-	debugf("now: %s, fileName: %s, name: %s\n", path, file->f_name ,name);
+	//debugf("now: %s, fileName: %s, name: %s\n", path, file->f_name ,name);
 	u_int nblock;
 	nblock = file->f_size / BLOCK_SIZE;
 
@@ -838,7 +838,7 @@ int traverse_file(const char *path, struct File *file, const char *name, struct 
 
 	// 2. 比较当前文件名是否等于 name，如果相等则更改 res
 	
-	if (strcmp(path, name) == 0) {
+	if (strcmp(file->f_name, name) == 0) {
 		/*增加 res->count*/
 		/*添加 res 的路径*/
 		//debugf("opop\n");
@@ -879,7 +879,7 @@ int find_files(const char *path, const char *name, struct Find_res *res) {
 		if ((r = walk_path(path, NULL, &file, NULL)) != 0) {
 			return r;
 		}
-		debugf("BBBBBB: %s : %s\n", path, name);
+		//debugf("BBBBBB: %s : %s\n", path, name);
 		//debugf("%s\n", file->f_name);
         // 在 path 对应的文件夹下面遍历，找到所有名字为 name 的文件，你可以调用下面的参考函数 traverse_file
         // Lab5-Exam: Your code here. (2/2)
