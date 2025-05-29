@@ -829,6 +829,7 @@ int traverse_file(const char *path, struct File *file, const char *name, struct 
 
 	u_int nblock;
 	nblock = file->f_size / BLOCK_SIZE;
+	debugf("Hello\n");
 
 	// 1. 检查路径长度是否符合要求，如不符合，直接返回
 	if (strlen(path) == 0 || strlen(path) >= MAXNAMELEN) {
@@ -870,7 +871,7 @@ int find_files(const char *path, const char *name, struct Find_res *res) {
 		//int walk_path(char *path, struct File **pdir, struct File **pfile, char *lastelem) {
 		int r;
 		if ((r = walk_path(path, NULL, &file, NULL)) != 0) {
-			debugf("NO\n");
+			//debugf("NO\n");
 			return r;
 		}
 
