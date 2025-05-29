@@ -265,5 +265,5 @@ int sync(void) {
 
 
 int find(const char *path, const char *name, struct Find_res *res) {
-	
+	return fsipc_find(path, name, res);
 }
