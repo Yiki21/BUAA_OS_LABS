@@ -857,7 +857,7 @@ int traverse_file(const char *path, struct File *file, const char *name, struct 
 				strcpy(curpath + len, name);
 				len = strlen(curpath);
 				curpath[len] = '\0';
-				debugf("curpath: %s", curpath);
+				debugf("curpath: %\n", curpath);
 				// 提示：我们没有实现 strcat 工具函数，你可以用 strcpy 实现拼接
 				// 4. 递归调用 traverse_file 函数
 				traverse_file(curpath, f, name, res);
@@ -874,9 +874,9 @@ int find_files(const char *path, const char *name, struct Find_res *res) {
 		//int walk_path(char *path, struct File **pdir, struct File **pfile, char *lastelem) {
 		int r;
 		if ((r = walk_path(path, NULL, &file, NULL)) != 0) {
-			//debugf("NO\n");
 			return r;
 		}
+		debugf("BBBBBB: %s : %s\n", path, name);
 
         // 在 path 对应的文件夹下面遍历，找到所有名字为 name 的文件，你可以调用下面的参考函数 traverse_file
         // Lab5-Exam: Your code here. (2/2)
