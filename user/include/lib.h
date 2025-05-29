@@ -125,6 +125,7 @@ int remove(const char *path);
 int ftruncate(int fd, u_int size);
 int sync(void);
 int find(const char *path, const char *name, struct Find_res *res);
+int fsipc_find(const char *path, const char *name, struct Find_res *res);
 
 #define user_assert(x)                                                                             \
 	do {                                                                                       \

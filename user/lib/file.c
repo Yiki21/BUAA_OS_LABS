@@ -262,3 +262,8 @@ int remove(const char *path) {
 int sync(void) {
 	return fsipc_sync();
 }
+
+
+int find(const char *path, const char *name, struct Find_res *res) {
+	
+}
