@@ -205,6 +205,12 @@ int builtin_exit(char **argv) {
 
 static int last_exit_status = 0;
 
+int is_builtin_cmd(char *cmd) {
+    return (strcmp(cmd, "cd") == 0 || 
+            strcmp(cmd, "pwd") == 0 || 
+            strcmp(cmd, "exit") == 0);
+}
+
 int is_builtin(char **argv) {
     if (strcmp(argv[0], "cd") == 0) {
         last_exit_status = builtin_cd(argv);
@@ -231,12 +237,7 @@ int parsecmd(char **argv, int *rightpipe) {
         int c = gettoken(0, &t);
         switch (c) {
         case 0:
-            // 在返回前解析所有路径参数
-            for (int i = 1; i < argc; i++) {
-                if (argv[i][0] != '-') { // 不是选项参数
-                    argv[i] = resolve_path(argv[i]);
-                }
-            }
+            // 移除这里的路径解析，改为在runcmd中处理
             return argc;
         case 'w':
             if (argc >= MAXARGS) {
@@ -250,55 +251,31 @@ int parsecmd(char **argv, int *rightpipe) {
                 debugf("syntax error: < not followed by word\n");
                 exit();
             }
-            // Open 't' for reading, dup it onto fd 0, and then close the
-            // original fd. If the 'open' function encounters an error, utilize
-            // 'debugf' to print relevant messages, and subsequently terminate
-            // the process using 'exit'.
-            /* Exercise 6.5: Your code here. (1/3) */
+            // 对重定向文件名进行路径解析
+            t = resolve_path(t);
             if ((fd = open(t, O_RDONLY)) < 0) {
                 debugf("open %s: %d\n", t, fd);
                 exit();
             }
             dup(fd, 0);
             close(fd);
-
             break;
         case '>':
             if (gettoken(0, &t) != 'w') {
                 debugf("syntax error: > not followed by word\n");
                 exit();
             }
-            // Open 't' for writing, create it if not exist and trunc it if
-            // exist, dup it onto fd 1, and then close the original fd. If the
-            // 'open' function encounters an error, utilize 'debugf' to print
-            // relevant messages, and subsequently terminate the process using
-            // 'exit'.
-            /* Exercise 6.5: Your code here. (2/3) */
+            // 对重定向文件名进行路径解析
+            t = resolve_path(t);
             if ((fd = open(t, O_WRONLY | O_CREAT | O_TRUNC)) < 0) {
                 debugf("open %s: %d\n", t, fd);
                 exit();
             }
             dup(fd, 1);
             close(fd);
-
             break;
         case '|':;
-            /*
-             * First, allocate a pipe.
-             * Then fork, set '*rightpipe' to the returned child envid or zero.
-             * The child runs the right side of the pipe:
-             * - dup the read end of the pipe onto 0
-             * - close the read end of the pipe
-             * - close the write end of the pipe
-             * - and 'return parsecmd(argv, rightpipe)' again, to parse the rest
-             * of the command line. The parent runs the left side of the pipe:
-             * - dup the write end of the pipe onto 1
-             * - close the write end of the pipe
-             * - close the read end of the pipe
-             * - and 'return argc', to execute the left of the pipeline.
-             */
             int p[2];
-            /* Exercise 6.5: Your code here. (3/3) */
             if ((r = pipe(p)) < 0) {
                 debugf("pipe: %d\n", r);
                 exit();
@@ -321,11 +298,9 @@ int parsecmd(char **argv, int *rightpipe) {
                 return argc;  // return argc to execute the left side of the
                               // pipeline
             }
-
             break;
         }
     }
-
     return argc;
 }
 
@@ -333,12 +308,27 @@ void runcmd(char **argv, int argc, int rightpipe) {
     if (argc == 0) {
         return;
     }
-    // printf("argc: %d\n", argc);
-    // for (int i = 0; i < argc; i++) {
-    //     printf("%s ", argv[i]);
-    // }
-    // printf("\n");
+    
     argv[argc] = 0;
+    
+    // 对非内置命令的参数进行路径解析
+    if (!is_builtin_cmd(argv[0])) {
+        // 特殊处理ls命令：如果没有参数，添加当前目录
+        if (strcmp(argv[0], "ls.b") == 0 && argc == 1) {
+            argv[1] = cur_path;
+            argc = 2;
+            argv[2] = 0;
+            //printf("ls: no arguments provided, using current directory '%s'\n", cur_path);
+        } else {
+            // 对其他命令的文件路径参数进行解析
+            for (int i = 1; i < argc; i++) {
+                if (argv[i][0] != '-') { // 不是选项参数
+                    argv[i] = resolve_path(argv[i]);
+                }
+            }
+        }
+    }
+    
     int child = spawn(argv[0], argv);
     close_all();
     if (child >= 0) {
@@ -352,6 +342,9 @@ void runcmd(char **argv, int argc, int rightpipe) {
     }
     exit();
 }
+
+
+
 
 void readline(char *buf, u_int n) {
     int r;
