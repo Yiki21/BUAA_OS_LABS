@@ -5,17 +5,14 @@ int main(int argc, char **argv) {
     int force = 0;
     char *target_path = NULL;
     int arg_index = 1;
+    
     if (argc < 2) {
-        write(2, "Usage: touch <file1> <file2> ...\n", 33);
-        return 1;
-    }
-    if (argv[1] == NULL) {
-        printf("rm: missing operand\n");
+        write(2, "Usage: rm [-rf] <file>\n", 23);
         return 1;
     }
 
     // 解析选项
-    while (argv[arg_index] && argv[arg_index][0] == '-') {
+    while (arg_index < argc && argv[arg_index][0] == '-') {
         char *opt = argv[arg_index];
         if (strcmp(opt, "-r") == 0) {
             recursive = 1;
@@ -31,16 +28,17 @@ int main(int argc, char **argv) {
         arg_index++;
     }
 
-    if (argv[arg_index] == NULL) {
+    if (arg_index >= argc) {
         printf("rm: missing operand\n");
         return 1;
     }
     
-    target_path = argv[arg_index];
-    if (argv[arg_index + 1] != NULL) {
+    if (arg_index + 1 < argc) {
         printf("rm: too many arguments\n");
         return 1;
     }
+    
+    target_path = argv[arg_index];
     
     // 直接使用传入的路径
     char *path = target_path;

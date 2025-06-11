@@ -333,7 +333,12 @@ void runcmd(char **argv, int argc, int rightpipe) {
     if (argc == 0) {
         return;
     }
-    // printf("%s, %s\n", argv[0], argv[1] ? argv[1] : "(null)");
+    // printf("argc: %d\n", argc);
+    // for (int i = 0; i < argc; i++) {
+    //     printf("%s ", argv[i]);
+    // }
+    // printf("\n");
+    argv[argc] = 0;
     int child = spawn(argv[0], argv);
     close_all();
     if (child >= 0) {

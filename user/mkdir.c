@@ -14,6 +14,12 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    // // 添加调试输出
+    // printf("DEBUG: argc = %d\n", argc);
+    // for (int i = 0; i < argc; i++) {
+    //     printf("DEBUG: argv[%d] = '%s'\n", i, argv[i] ? argv[i] : "NULL");
+    // }
+
     // 检查是否有 -p 选项
     if (strcmp(argv[1], "-p") == 0) {
         recursive = 1;
@@ -22,13 +28,13 @@ int main(int argc, char *argv[]) {
             return 1;
         }
         dir_path = argv[2];
-        if (argv[3] != NULL) {
+        if (argc > 3) {
             printf("mkdir: too many arguments\n");
             return 1;
         }
     } else {
         dir_path = argv[1];
-        if (argv[2] != NULL) {
+        if (argc > 2) {
             printf("mkdir: too many arguments\n");
             return 1;
         }

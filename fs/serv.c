@@ -141,47 +141,73 @@ int open_lookup(u_int envid, u_int fileid, struct Open **po) {
  * Otherwise, use ipc_send to return the error value to the caller.
  */
 void serve_open(u_int envid, struct Fsreq_open *rq) {
-	struct File *f;
-	struct Filefd *ff;
-	int r;
-	struct Open *o;
+    struct File *f;
+    struct Filefd *ff;
+    int r;
+    struct Open *o;
 
-	// Find a file id.
-	if ((r = open_alloc(&o)) < 0) {
-		ipc_send(envid, r, 0, 0);
-		return;
-	}
+    // Find a file id.
+    if ((r = open_alloc(&o)) < 0) {
+        ipc_send(envid, r, 0, 0);
+        return;
+    }
 
-	if ((rq->req_omode & O_CREAT) && (r = file_create(rq->req_path, &f)) < 0 &&
-	    r != -E_FILE_EXISTS) {
-		ipc_send(envid, r, 0, 0);
-		return;
-	}
+    // Handle O_MKDIR mode - create directory
+    if (rq->req_omode & O_MKDIR) {
+        // For directory creation, we need to create a new directory file
+        if ((r = file_create(rq->req_path, &f)) < 0) {
+            if (r != -E_FILE_EXISTS) {
+                ipc_send(envid, r, 0, 0);
+                return;
+            }
+            // If file exists, check if it's a directory
+            if ((r = file_open(rq->req_path, &f)) < 0) {
+                ipc_send(envid, r, 0, 0);
+                return;
+            }
+            if (f->f_type != FTYPE_DIR) {
+                ipc_send(envid, -E_FILE_EXISTS, 0, 0);
+                return;
+            }
+        } else {
+            // Set the file type to directory
+            f->f_type = FTYPE_DIR;
+            f->f_size = 0;
+        }
+    } else {
+        // Handle regular file creation with O_CREAT
+        if ((rq->req_omode & O_CREAT) && (r = file_create(rq->req_path, &f)) < 0 &&
+            r != -E_FILE_EXISTS) {
+            ipc_send(envid, r, 0, 0);
+            return;
+        }
 
-	// Open the file.
-	if ((r = file_open(rq->req_path, &f)) < 0) {
-		ipc_send(envid, r, 0, 0);
-		return;
-	}
+        // Open the file.
+        if ((r = file_open(rq->req_path, &f)) < 0) {
+            ipc_send(envid, r, 0, 0);
+            return;
+        }
 
-	// Save the file pointer.
-	o->o_file = f;
+        // If mode include O_TRUNC, set the file size to 0
+        if (rq->req_omode & O_TRUNC) {
+            if ((r = file_set_size(f, 0)) < 0) {
+                ipc_send(envid, r, 0, 0);
+                return;
+            }
+        }
+    }
 
-	// If mode include O_TRUNC, set the file size to 0
-	if (rq->req_omode & O_TRUNC) {
-		if ((r = file_set_size(f, 0)) < 0) {
-			ipc_send(envid, r, 0, 0);
-		}
-	}
+    // Save the file pointer.
+    o->o_file = f;
 
-	// Fill out the Filefd structure
-	ff = (struct Filefd *)o->o_ff;
-	ff->f_file = *f;
-	ff->f_fileid = o->o_fileid;
-	o->o_mode = rq->req_omode;
-	ff->f_fd.fd_omode = o->o_mode;
-	ff->f_fd.fd_dev_id = devfile.dev_id;
-	ipc_send(envid, 0, o->o_ff, PTE_D | PTE_LIBRARY);
+    // Fill out the Filefd structure
+    ff = (struct Filefd *)o->o_ff;
+    ff->f_file = *f;
+    ff->f_fileid = o->o_fileid;
+    o->o_mode = rq->req_omode;
+    ff->f_fd.fd_omode = o->o_mode;
+    ff->f_fd.fd_dev_id = devfile.dev_id;
+    ipc_send(envid, 0, o->o_ff, PTE_D | PTE_LIBRARY);
 }
 
 /*

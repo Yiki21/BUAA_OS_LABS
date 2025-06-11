@@ -1,6 +1,8 @@
 
-INITAPPS +=
+INITAPPS += 
 
-USERLIB	+=
+USERLIB	+= 
 
-USERAPPS +=
+USERAPPS += rm.b \
+			mkdir.b \
+			touch.b

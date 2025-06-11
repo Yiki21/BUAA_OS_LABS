@@ -5,7 +5,8 @@ int main(int argc, char **argv) {
         write(2, "Usage: touch <file>\n", 20);
         return 1;
     }
-    if (argv[2] != NULL) {
+    
+    if (argc > 2) {
         printf("touch: too many arguments\n");
         return 1;
     }
