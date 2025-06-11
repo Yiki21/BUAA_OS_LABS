@@ -9,5 +9,8 @@ size_t strlen(const char *s);
 char *strcpy(char *dst, const char *src);
 const char *strchr(const char *s, int c);
 int strcmp(const char *p, const char *q);
+char *strtok(char *str, const char *delim);
+char *strcat(char *dest, const char *src);
+char *strncat(char *dest, const char *src, size_t n);
 
 #endif
