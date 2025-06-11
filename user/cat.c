@@ -22,6 +22,7 @@ int main(int argc, char **argv) {
 	if (argc == 1) {
 		cat(0, "<stdin>");
 	} else {
+		//printf("cat: ");
 		for (i = 1; i < argc; i++) {
 			f = open(argv[i], O_RDONLY);
 			if (f < 0) {

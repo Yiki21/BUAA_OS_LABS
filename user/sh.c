@@ -123,7 +123,6 @@ int builtin_cd(char **argv) {
 		return 1;
 	} else {
 		char *new_path = resolve_path(argv[1]);
-
 		struct Stat st;
 		if (stat(new_path, &st) < 0) {
 			printf("cd: The directory '%s' does not exist\n", argv[1]);
@@ -131,6 +130,7 @@ int builtin_cd(char **argv) {
 		}
 		// Check if it's actually a directory
         if (!st.st_isdir) {
+			printf("filePath: '%s' is not a directory\n", new_path);
 			printf("cd: '%s' is not a directory\n", argv[1]);
 			return 1;
         }
@@ -271,24 +271,18 @@ int parsecmd(char **argv, int *rightpipe) {
     return argc;
 }
 
-void runcmd(char *s) {
-    gettoken(s, 0);
-
-    char *argv[MAXARGS];
-    int rightpipe = 0;
-    int argc = parsecmd(argv, &rightpipe);
+void runcmd(char **argv, int argc, int rightpipe) {
     if (argc == 0) {
         return;
     }
-    argv[argc] = 0;
-
+    //printf("%s, %s\n", argv[0], argv[1] ? argv[1] : "(null)");
     int child = spawn(argv[0], argv);
     close_all();
     if (child >= 0) {
         wait(child);
     } else {
         debugf("spawn %s: %d\n", argv[0], child);
-		last_exit_status = -1;
+        last_exit_status = -1;
     }
     if (rightpipe) {
         wait(rightpipe);
@@ -396,7 +390,7 @@ int main(int argc, char **argv) {
             user_panic("fork: %d", r);
         }
         if (r == 0) {
-            runcmd(buf);
+            runcmd(argv, argc, rightpipe);  // 传递已解析的参数
             exit();
         } else {
             wait(r);
