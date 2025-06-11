@@ -1,5 +1,77 @@
 #include <types.h>
 
+char* strcat(char* dest, const char* src) {
+	char* p = dest;
+
+    // 找到 dest 的末尾
+    while (*p) {
+        p++;
+    }
+
+    // 复制 src 到末尾
+    while (*src) {
+        *p++ = *src++;
+    }
+
+    *p = '\0';  // 添加字符串结束符
+
+    return dest;
+}
+
+char *strncat(char *dest, const char *src, size_t n) {
+	char* p = dest;
+
+    // 找到 dest 的末尾
+    while (*p) {
+        p++;
+    }
+
+    // 复制最多 n 个字符
+    while (n-- && *src) {
+        *p++ = *src++;
+    }
+
+    *p = '\0';  // 添加字符串结束符
+
+    return dest;
+}
+
+char * strtok(char *str, const char *delim) {
+	static char* next = NULL;
+    if (str != NULL) {
+        next = str;
+    }
+    if (next == NULL) {
+        return NULL;
+    }
+
+    // 跳过前缀的分隔符
+    char* start = next;
+    while (*start && strchr(delim, *start)) {
+        start++;
+    }
+
+    if (*start == '\0') {
+        next = NULL;
+        return NULL;
+    }
+
+    // 找下一个分隔符
+    char* token_end = start;
+    while (*token_end && !strchr(delim, *token_end)) {
+        token_end++;
+    }
+
+    if (*token_end) {
+        *token_end = '\0';
+        next = token_end + 1;
+    } else {
+        next = NULL;
+    }
+
+    return start;
+}
+
 void *memcpy(void *dst, const void *src, size_t n) {
 	void *dstaddr = dst;
 	void *max = dst + n;
