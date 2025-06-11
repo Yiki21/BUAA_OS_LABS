@@ -64,6 +64,7 @@ int gettoken(char *s, char **p1) {
 }
 
 #define MAXPATHLEN 1024
+
 char cur_path[MAXPATHLEN] =
     "/"; // Current working directory, initialized to root
 
@@ -115,28 +116,28 @@ char *resolve_path(const char *origin_path) {
 }
 
 int builtin_cd(char **argv) {
-	if (argv[1] == NULL) {
-		strcpy(cur_path, "/");
-		return 0;
-	} else if (argv[2] != NULL) {
-		printf("Too many args for cd command\n");
-		return 1;
-	} else {
-		char *new_path = resolve_path(argv[1]);
-		struct Stat st;
-		if (stat(new_path, &st) < 0) {
-			printf("cd: The directory '%s' does not exist\n", argv[1]);
-			return 1;
-		}
-		// Check if it's actually a directory
-        if (!st.st_isdir) {
-			printf("filePath: '%s' is not a directory\n", new_path);
-			printf("cd: '%s' is not a directory\n", argv[1]);
-			return 1;
+    if (argv[1] == NULL) {
+        strcpy(cur_path, "/");
+        return 0;
+    } else if (argv[2] != NULL) {
+        printf("Too many args for cd command\n");
+        return 1;
+    } else {
+        char *new_path = resolve_path(argv[1]);
+        struct Stat st;
+        if (stat(new_path, &st) < 0) {
+            printf("cd: The directory '%s' does not exist\n", argv[1]);
+            return 1;
         }
-		strcpy(cur_path, new_path);
-		return 0;
-	}
+        // Check if it's actually a directory
+        if (!st.st_isdir) {
+            printf("filePath: '%s' is not a directory\n", new_path);
+            printf("cd: '%s' is not a directory\n", argv[1]);
+            return 1;
+        }
+        strcpy(cur_path, new_path);
+        return 0;
+    }
 }
 
 int builtin_pwd(char **argv) {
@@ -145,14 +146,61 @@ int builtin_pwd(char **argv) {
     while (argv[arg_count + 1] != NULL) {
         arg_count++;
     }
-    
+
     if (arg_count > 0) {
         printf("pwd: expected 0 arguments; got %d\n", arg_count);
         return 2;
     }
-    
+
     printf("%s\n", cur_path);
     return 0;
+}
+
+int builtin_exit(char **argv) {
+    int exit_code = 0;
+
+    if (argv[1] != NULL) {
+        // 简单的数字解析
+        char *str = argv[1];
+        int sign = 1;
+
+        if (*str == '-') {
+            sign = -1;
+            str++;
+        } else if (*str == '+') {
+            str++;
+        }
+
+        // 检查是否为有效数字
+        char *check = str;
+        if (*check == '\0') {
+            printf("exit: numeric argument required\n");
+            exit();
+        }
+
+        while (*check) {
+            if (*check < '0' || *check > '9') {
+                printf("exit: numeric argument required\n");
+                exit();
+            }
+            check++;
+        }
+
+        // 转换为数字
+        while (*str >= '0' && *str <= '9') {
+            exit_code = exit_code * 10 + (*str - '0');
+            str++;
+        }
+        exit_code *= sign;
+
+        if (argv[2] != NULL) {
+            printf("exit: too many arguments\n");
+            return 1;
+        }
+    }
+
+    exit();
+    return exit_code; // 这行不会执行到
 }
 
 static int last_exit_status = 0;
@@ -164,6 +212,10 @@ int is_builtin(char **argv) {
     }
     if (strcmp(argv[0], "pwd") == 0) {
         last_exit_status = builtin_pwd(argv);
+        return 1;
+    }
+    if (strcmp(argv[0], "exit") == 0) {
+        last_exit_status = builtin_exit(argv);
         return 1;
     }
     return 0;
@@ -179,6 +231,12 @@ int parsecmd(char **argv, int *rightpipe) {
         int c = gettoken(0, &t);
         switch (c) {
         case 0:
+            // 在返回前解析所有路径参数
+            for (int i = 1; i < argc; i++) {
+                if (argv[i][0] != '-') { // 不是选项参数
+                    argv[i] = resolve_path(argv[i]);
+                }
+            }
             return argc;
         case 'w':
             if (argc >= MAXARGS) {
@@ -275,7 +333,7 @@ void runcmd(char **argv, int argc, int rightpipe) {
     if (argc == 0) {
         return;
     }
-    //printf("%s, %s\n", argv[0], argv[1] ? argv[1] : "(null)");
+    // printf("%s, %s\n", argv[0], argv[1] ? argv[1] : "(null)");
     int child = spawn(argv[0], argv);
     close_all();
     if (child >= 0) {
@@ -372,25 +430,25 @@ int main(int argc, char **argv) {
             printf("# %s\n", buf);
         }
 
-		gettoken(buf, 0);
-		char *argv[MAXARGS];
-		int rightpipe = 0;
-		int argc = parsecmd(argv, &rightpipe);
-		if (argc > 0) {
-			argv[argc] = 0;
-			if (is_builtin(argv)) {
-				if (rightpipe) {
-					wait(rightpipe);
-				}
-				continue;
-			}
-		}
+        gettoken(buf, 0);
+        char *argv[MAXARGS];
+        int rightpipe = 0;
+        int argc = parsecmd(argv, &rightpipe);
+        if (argc > 0) {
+            argv[argc] = 0;
+            if (is_builtin(argv)) {
+                if (rightpipe) {
+                    wait(rightpipe);
+                }
+                continue;
+            }
+        }
 
         if ((r = fork()) < 0) {
             user_panic("fork: %d", r);
         }
         if (r == 0) {
-            runcmd(argv, argc, rightpipe);  // 传递已解析的参数
+            runcmd(argv, argc, rightpipe); // 传递已解析的参数
             exit();
         } else {
             wait(r);
