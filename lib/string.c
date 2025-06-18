@@ -328,14 +328,3 @@ char *strstr(const char *haystack, const char *needle) {
     // 没有找到匹配的子串
     return NULL;
 }
-
-char *strchr(const char *s, int c) {
-    while (*s) {
-        if (*s == c) {
-            return (char *)s;
-        }
-        s++;
-    }
-    // 如果没有找到，返回 NULL
-    return NULL;
-}

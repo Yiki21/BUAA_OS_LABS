@@ -21,7 +21,7 @@ struct Args {
 	char value[16];
 	int exported; // 是否导出
 	int readonly; // 是否只读
-}
+};
 
 // Control block of an environment (process).
 struct Env {
@@ -53,7 +53,7 @@ struct Env {
 
 	struct Args env_args[MAX_ARGS]; // environment arguments
 	int args_count; // number of environment arguments
-} ;  // 添加 packed 属性确保布局一致
+};  // 添加 packed 属性确保布局一致
 
 LIST_HEAD(Env_list, Env);
 TAILQ_HEAD(Env_sched_list, Env);

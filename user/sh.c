@@ -74,6 +74,7 @@ int main(int argc, char **argv) {
         }
         read_line(buf, sizeof buf);
         trim(buf);
+        expand_vars(buf);
 
         if (buf[0] == '\0' || buf[0] == '#') {
             continue; // 空行
@@ -141,6 +142,7 @@ int lsh_num_builtins(void) { return sizeof(builtin_str) / sizeof(char *); }
 int is_builtin(char *cmd) {
     for (int i = 0; i < lsh_num_builtins(); i++) {
         if (strcmp(cmd, builtin_str[i]) == 0) {
+            //debugf("is_builtin: %s found at index %d\n", cmd, i);
             return i;
         }
     }
@@ -219,6 +221,7 @@ int sh_pwd(int argc, char **args) {
 int sh_declare(int argc, char **args) {
     int exported = 0, readonly = 0;
 
+    //debugf("declare called with %d args\n", argc);
     int i = 1;
     while (i < argc && args[i] && args[i][0] == '-') {
         for (int j = 1; args[i][j]; ++j) {
@@ -238,6 +241,7 @@ int sh_declare(int argc, char **args) {
         char names[MAX_VARS][16];
         char values[MAX_VARS][16];
         int count = syscall_all_args(names, values);
+        //debugf("declare: found %d variables\n", count);
         for (int i = 0; i < count; i++) {
             printf("%s=%s\n", names[i], values[i]);
         }
@@ -250,6 +254,7 @@ int sh_declare(int argc, char **args) {
             if (syscall_set_args(args[i], eq + 1, exported, readonly) < 0) {
                 return 1;
             }
+            //debugf("the name is %s, value is %s, exported: %d, readonly: %d\n", args[i], eq + 1, exported, readonly);
         } else {
             if (syscall_set_args(args[i], "", exported, readonly) < 0) {
                 return 1;
@@ -301,6 +306,7 @@ int run_with_logic(char *line) {
         if (i < n - 1 && ops[i] == '|' && status == 0)
             break;
     }
+    return 0;
 }
 
 int split_logical(char *line, char *segments[], char ops[], int *n) {
@@ -471,24 +477,44 @@ int run_pipeline(char *cmds[], int index, int ncmds, int input_fd) {
 
 void expand_vars(char *line) {
     char result[1024] = "";
+    char *dest = result;
+
     for (char *p = line; *p;) {
         if (*p == '$') {
-            p++;
+            p++; // 跳过 '$'
             char varname[16] = "";
             char var_value[16] = "";
             int j = 0;
+
+            // 提取变量名
             while (*p && !strchr(WHITESPACE SYMBOLS, *p) &&
                    j < sizeof(varname) - 1) {
                 varname[j++] = *p++;
             }
             varname[j] = '\0';
-            syscall_get_args(varname, var_value);
-            if (idx >= 0)
-                strncat(result, var_value, sizeof(result) - strlen(result) - 1);
+
+            if (j > 0) { // 如果有变量名
+                syscall_get_args(varname, var_value);
+                // 将变量值添加到结果中
+                int value_len = strlen(var_value);
+                if (dest - result + value_len < sizeof(result) - 1) {
+                    strcpy(dest, var_value);
+                    dest += value_len;
+                }
+            } else {
+                // 如果 $ 后面没有变量名，保留 $
+                if (dest - result < sizeof(result) - 1) {
+                    *dest++ = '$';
+                }
+            }
         } else {
-            strncat(result, p, 1);
+            // 普通字符，直接复制
+            if (dest - result < sizeof(result) - 1) {
+                *dest++ = *p;
+            }
             p++;
         }
     }
+    *dest = '\0';
     strcpy(line, result);
 }

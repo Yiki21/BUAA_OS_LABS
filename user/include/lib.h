@@ -128,7 +128,7 @@ int syscall_get_dir(char *path);
 int syscall_ch_dir(const char *path);
 int syscall_set_args(const char *name, const char *value, int exported, int readonly);
 int syscall_get_args(const char *name, char *value);
-int syscall_all_args(char names[][],char values[][]);
+int syscall_all_args(char names[][16],char values[][16]);
 int syscall_unset_args(const char *name);
 
 #define user_assert(x)                                                         \

@@ -802,9 +802,7 @@ int sys_set_args(const char *name, const char *value, int reported,
 
     int index = get_args_index(name);
     if (index < 0) {
-        curenv->args_count++;
-        if (curenv->args_count > MAX_ARGS) {
-            curenv->args_count--; // 恢复计数
+        if (curenv->args_count >= MAX_ARGS) {
             return -E_ARGS_FULL;  // 参数数量超过限制
         }
 
@@ -835,7 +833,7 @@ int sys_get_args(const char *name, char *value) {
     return 0;
 }
 
-int sys_all_args(char names[][], char values[][]) {
+int sys_all_args(char names[][16], char values[][16]) {
     if (names == NULL || values == NULL) {
         return -E_INVAL; // 参数无效
     }

@@ -80,7 +80,7 @@ int syscall_get_args(const char *name, char *value) {
     return msyscall(SYS_get_args, name, value);
 }
 
-int syscall_all_args(char names[][],char values[][]) { return msyscall(SYS_all_args, names, values); }
+int syscall_all_args(char names[][16],char values[][16]) { return msyscall(SYS_all_args, names, values); }
 
 int syscall_unset_args(const char *name) {
     return msyscall(SYS_unset_args, name);
