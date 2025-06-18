@@ -17,6 +17,7 @@ void usage(void) {
 
 void read_line(char *buf, u_int n);
 void trim(char *s);
+void remove_comments(char *s);
 int run_pipeline(char *cmds[], int index, int ncmds, int input_fd);
 int split_logical(char *line, char *segments[], char ops[], int *n);
 int run_single_command(char *line);
@@ -75,6 +76,7 @@ int main(int argc, char **argv) {
         read_line(buf, sizeof buf);
         trim(buf);
         expand_vars(buf);
+        remove_comments(buf);
 
         if (buf[0] == '\0' || buf[0] == '#') {
             continue; // 空行
@@ -517,4 +519,15 @@ void expand_vars(char *line) {
     }
     *dest = '\0';
     strcpy(line, result);
+}
+
+void remove_comments(char *s) {
+    char *p = s;
+    while (*p) {
+        if (*p == '#') {
+            *p = '\0'; // 注释开始，截断字符串
+            break;
+        }
+        p++;
+    }
 }
