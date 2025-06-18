@@ -44,6 +44,12 @@
 // File not a valid executable
 #define E_NOT_EXEC 13
 
+// Args is Read-Only
+#define E_ARGS_RO 14
+
+// Args is full
+#define E_ARGS_FULL 15
+
 /*
  * A quick wrapper around function calls to propagate errors.
  * Use this with caution, as it leaks resources we've acquired so far.

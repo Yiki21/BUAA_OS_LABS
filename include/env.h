@@ -14,6 +14,14 @@
 #define ENV_FREE 0
 #define ENV_RUNNABLE 1
 #define ENV_NOT_RUNNABLE 2
+#define MAX_ARGS 16
+
+struct Args {
+	char name[16];
+	char value[16];
+	int exported; // 是否导出
+	int readonly; // 是否只读
+}
 
 // Control block of an environment (process).
 struct Env {
@@ -39,9 +47,12 @@ struct Env {
 
 	// Lab 6 scheduler counts
 	u_int env_runs; // number of times we've been env_run'ed
+
 	char work_dir[128]; // working directory for this env
 	int ret_code; // return code for this env
-	
+
+	struct Args env_args[MAX_ARGS]; // environment arguments
+	int args_count; // number of environment arguments
 } ;  // 添加 packed 属性确保布局一致
 
 LIST_HEAD(Env_list, Env);

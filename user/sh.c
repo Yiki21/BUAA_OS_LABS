@@ -5,6 +5,7 @@
 #define SYMBOLS "<|>&;()"
 #define MAX_CMDS 64
 #define MAX_ARGS 128
+#define MAX_VARS 16
 
 char buf[1024];
 char *argv[128];
@@ -25,11 +26,14 @@ int run_with_logic(char *line);
 
 int sh_cd(int argc, char **args);
 int sh_pwd(int argc, char **args);
+int sh_declare(int argc, char **args);
+int sh_unset(int argc, char **args);
 int sh_exit(int argc, char **args) __attribute__((noreturn));
 
-char *builtin_str[] = {"cd", "exit", "pwd"};
+char *builtin_str[] = {"cd", "exit", "pwd", "declare", "unset"};
 
-int (*builtin_func[])(int argc, char **) = {&sh_cd, &sh_exit, &sh_pwd};
+int (*builtin_func[])(int argc, char **) = {&sh_cd, &sh_exit, &sh_pwd,
+                                            &sh_declare, &sh_unset};
 
 int main(int argc, char **argv) {
     int r;
@@ -211,7 +215,66 @@ int sh_pwd(int argc, char **args) {
     return 0;
 }
 
-__attribute__((noreturn)) int sh_exit(int argc, char **args)  {
+// declare [-xr] [NAME[=VALUE]]
+int sh_declare(int argc, char **args) {
+    int exported = 0, readonly = 0;
+
+    int i = 1;
+    while (i < argc && args[i] && args[i][0] == '-') {
+        for (int j = 1; args[i][j]; ++j) {
+            if (args[i][j] == 'x')
+                exported = 1;
+            else if (args[i][j] == 'r')
+                readonly = 1;
+            else {
+                printf("declare: invalid option -%c\n", args[i][j]);
+                return 1;
+            }
+        }
+        i++;
+    }
+
+    if (i >= argc) {
+        char names[MAX_VARS][16];
+        char values[MAX_VARS][16];
+        int count = syscall_all_args(names, values);
+        for (int i = 0; i < count; i++) {
+            printf("%s=%s\n", names[i], values[i]);
+        }
+    }
+
+    while (i < argc) {
+        char *eq = strchr(args[i], '=');
+        if (eq) {
+            *eq = '\0';
+            if (syscall_set_args(args[i], eq + 1, exported, readonly) < 0) {
+                return 1;
+            }
+        } else {
+            if (syscall_set_args(args[i], "", exported, readonly) < 0) {
+                return 1;
+            }
+        }
+        i++;
+    }
+    return 0;
+}
+
+int sh_unset(int argc, char **args) {
+    if (argc < 2) {
+        printf("unset: expected at least 1 argument\n");
+        return 1;
+    }
+
+    for (int i = 1; i < argc; i++) {
+        if (syscall_unset_args(args[i]) < 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+__attribute__((noreturn)) int sh_exit(int argc, char **args) {
     if (argc > 1) {
         printf("exit: expected 0 arguments; got %d\n", argc);
         return 2;
@@ -404,4 +467,28 @@ int run_pipeline(char *cmds[], int index, int ncmds, int input_fd) {
         }
         return run_pipeline(cmds, index + 1, ncmds, pipefd[0]);
     }
+}
+
+void expand_vars(char *line) {
+    char result[1024] = "";
+    for (char *p = line; *p;) {
+        if (*p == '$') {
+            p++;
+            char varname[16] = "";
+            char var_value[16] = "";
+            int j = 0;
+            while (*p && !strchr(WHITESPACE SYMBOLS, *p) &&
+                   j < sizeof(varname) - 1) {
+                varname[j++] = *p++;
+            }
+            varname[j] = '\0';
+            syscall_get_args(varname, var_value);
+            if (idx >= 0)
+                strncat(result, var_value, sizeof(result) - strlen(result) - 1);
+        } else {
+            strncat(result, p, 1);
+            p++;
+        }
+    }
+    strcpy(line, result);
 }

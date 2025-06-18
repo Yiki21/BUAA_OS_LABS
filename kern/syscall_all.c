@@ -16,8 +16,8 @@ extern struct Env *curenv;
  * 	`c` is the character you want to print.
  */
 void sys_putchar(int c) {
-  printcharc((char)c);
-  return;
+    printcharc((char)c);
+    return;
 }
 
 /* Overview:
@@ -27,14 +27,14 @@ void sys_putchar(int c) {
  * 	`s` is base address of the string, and `num` is length of the string.
  */
 int sys_print_cons(const void *s, u_int num) {
-  if (((u_int)s + num) > UTOP || ((u_int)s) >= UTOP || (s > s + num)) {
-    return -E_INVAL;
-  }
-  u_int i;
-  for (i = 0; i < num; i++) {
-    printcharc(((char *)s)[i]);
-  }
-  return 0;
+    if (((u_int)s + num) > UTOP || ((u_int)s) >= UTOP || (s > s + num)) {
+        return -E_INVAL;
+    }
+    u_int i;
+    for (i = 0; i < num; i++) {
+        printcharc(((char *)s)[i]);
+    }
+    return 0;
 }
 
 /* Overview:
@@ -56,9 +56,9 @@ u_int sys_getenvid(void) { return curenv->env_id; }
  */
 // void sys_yield(void);
 void __attribute__((noreturn)) sys_yield(void) {
-  // Hint: Just use 'schedule' with 'yield' set.
-  /* Exercise 4.7: Your code here. */
-  schedule(1);
+    // Hint: Just use 'schedule' with 'yield' set.
+    /* Exercise 4.7: Your code here. */
+    schedule(1);
 }
 
 /* Overview:
@@ -75,20 +75,20 @@ void __attribute__((noreturn)) sys_yield(void) {
  */
 int sys_env_destroy(u_int envid, int status) {
     struct Env *e;
-    
-    //printk("sys_env_destroy: envid=0x%x, status=%d\n", envid, status);
-    
+
+    // printk("sys_env_destroy: envid=0x%x, status=%d\n", envid, status);
+
     try(envid2env(envid, &e, 1));
-    
+
     // 检查 e 指针是否有效
     if (!e || (u_long)e < ULIM) {
-        //printk("ERROR: Invalid env pointer in sys_env_destroy: %p\n", e);
+        // printk("ERROR: Invalid env pointer in sys_env_destroy: %p\n", e);
         return -E_BAD_ENV;
     }
-    
+
     e->ret_code = status;
-    
-    //printk("sys_env_destroy: destroying env %p (id=0x%x)\n", e, e->env_id);
+
+    // printk("sys_env_destroy: destroying env %p (id=0x%x)\n", e, e->env_id);
     env_destroy(e);
     return 0;
 }
@@ -102,19 +102,19 @@ int sys_env_destroy(u_int envid, int status) {
  *   Returns the original error if underlying calls fail.
  */
 int sys_set_tlb_mod_entry(u_int envid, u_int func) {
-  struct Env *env;
+    struct Env *env;
 
-  /* Step 1: Convert the envid to its corresponding 'struct Env *' using
-   * 'envid2env'. */
-  /* Exercise 4.12: Your code here. (1/2) */
-  try(envid2env(envid, &env, 1));
+    /* Step 1: Convert the envid to its corresponding 'struct Env *' using
+     * 'envid2env'. */
+    /* Exercise 4.12: Your code here. (1/2) */
+    try(envid2env(envid, &env, 1));
 
-  /* Step 2: Set its 'env_user_tlb_mod_entry' to 'func'. */
-  /* Exercise 4.12: Your code here. (2/2) */
+    /* Step 2: Set its 'env_user_tlb_mod_entry' to 'func'. */
+    /* Exercise 4.12: Your code here. (2/2) */
 
-  env->env_user_tlb_mod_entry = func;
+    env->env_user_tlb_mod_entry = func;
 
-  return 0;
+    return 0;
 }
 
 /* Overview:
@@ -123,10 +123,10 @@ int sys_set_tlb_mod_entry(u_int envid, u_int func) {
 static inline int is_illegal_va(u_long va) { return va < UTEMP || va >= UTOP; }
 
 static inline int is_illegal_va_range(u_long va, u_int len) {
-  if (len == 0) {
-    return 0;
-  }
-  return va + len < va || va < UTEMP || va + len > UTOP;
+    if (len == 0) {
+        return 0;
+    }
+    return va + len < va || va < UTEMP || va + len > UTOP;
 }
 
 /* Overview:
@@ -147,31 +147,31 @@ static inline int is_illegal_va_range(u_long va, u_int len) {
  *   'envid2env', 'page_alloc', 'page_insert', 'try' (macro)
  */
 int sys_mem_alloc(u_int envid, u_int va, u_int perm) {
-  struct Env *env;
-  struct Page *pp;
+    struct Env *env;
+    struct Page *pp;
 
-  /* Step 1: Check if 'va' is a legal user virtual address using
-   * 'is_illegal_va'. */
-  /* Exercise 4.4: Your code here. (1/3) */
-  if (is_illegal_va(va)) {
-    return -E_INVAL;
-  }
+    /* Step 1: Check if 'va' is a legal user virtual address using
+     * 'is_illegal_va'. */
+    /* Exercise 4.4: Your code here. (1/3) */
+    if (is_illegal_va(va)) {
+        return -E_INVAL;
+    }
 
-  /* Step 2: Convert the envid to its corresponding 'struct Env *' using
-   * 'envid2env'. */
-  /* Hint: **Always** validate the permission in syscalls! */
-  /* Exercise 4.4: Your code here. (2/3) */
-  try(envid2env(envid, &env, 1));
+    /* Step 2: Convert the envid to its corresponding 'struct Env *' using
+     * 'envid2env'. */
+    /* Hint: **Always** validate the permission in syscalls! */
+    /* Exercise 4.4: Your code here. (2/3) */
+    try(envid2env(envid, &env, 1));
 
-  /* Step 3: Allocate a physical page using 'page_alloc'. */
-  /* Exercise 4.4: Your code here. (3/3) */
-  try(page_alloc(&pp));
+    /* Step 3: Allocate a physical page using 'page_alloc'. */
+    /* Exercise 4.4: Your code here. (3/3) */
+    try(page_alloc(&pp));
 
-  // printk("sys_mem_alloc: pp = %x\n", pp);
+    // printk("sys_mem_alloc: pp = %x\n", pp);
 
-  /* Step 4: Map the allocated page at 'va' with permission 'perm' using
-   * 'page_insert'. */
-  return page_insert(env->env_pgdir, env->env_asid, pp, va, perm);
+    /* Step 4: Map the allocated page at 'va' with permission 'perm' using
+     * 'page_insert'. */
+    return page_insert(env->env_pgdir, env->env_asid, pp, va, perm);
 }
 
 /* Overview:
@@ -190,39 +190,39 @@ int sys_mem_alloc(u_int envid, u_int va, u_int perm) {
  */
 int sys_mem_map(u_int srcid, u_int srcva, u_int dstid, u_int dstva,
                 u_int perm) {
-  struct Env *srcenv;
-  struct Env *dstenv;
-  struct Page *pp;
+    struct Env *srcenv;
+    struct Env *dstenv;
+    struct Page *pp;
 
-  /* Step 1: Check if 'srcva' and 'dstva' are legal user virtual addresses using
-   * 'is_illegal_va'. */
-  /* Exercise 4.5: Your code here. (1/4) */
-  if (is_illegal_va(srcva) || is_illegal_va(dstva)) {
-    return -E_INVAL;
-  }
+    /* Step 1: Check if 'srcva' and 'dstva' are legal user virtual addresses
+     * using 'is_illegal_va'. */
+    /* Exercise 4.5: Your code here. (1/4) */
+    if (is_illegal_va(srcva) || is_illegal_va(dstva)) {
+        return -E_INVAL;
+    }
 
-  /* Step 2: Convert the 'srcid' to its corresponding 'struct Env *' using
-   * 'envid2env'. */
-  /* Exercise 4.5: Your code here. (2/4) */
-  try(envid2env(srcid, &srcenv, 1));
+    /* Step 2: Convert the 'srcid' to its corresponding 'struct Env *' using
+     * 'envid2env'. */
+    /* Exercise 4.5: Your code here. (2/4) */
+    try(envid2env(srcid, &srcenv, 1));
 
-  /* Step 3: Convert the 'dstid' to its corresponding 'struct Env *' using
-   * 'envid2env'. */
-  /* Exercise 4.5: Your code here. (3/4) */
-  try(envid2env(dstid, &dstenv, 1));
+    /* Step 3: Convert the 'dstid' to its corresponding 'struct Env *' using
+     * 'envid2env'. */
+    /* Exercise 4.5: Your code here. (3/4) */
+    try(envid2env(dstid, &dstenv, 1));
 
-  /* Step 4: Find the physical page mapped at 'srcva' in the address space of
-   * 'srcid'. */
-  /* Return -E_INVAL if 'srcva' is not mapped. */
-  /* Exercise 4.5: Your code here. (4/4) */
-  pp = page_lookup(srcenv->env_pgdir, srcva, NULL);
-  if (pp == NULL) {
-    return -E_INVAL;
-  }
+    /* Step 4: Find the physical page mapped at 'srcva' in the address space of
+     * 'srcid'. */
+    /* Return -E_INVAL if 'srcva' is not mapped. */
+    /* Exercise 4.5: Your code here. (4/4) */
+    pp = page_lookup(srcenv->env_pgdir, srcva, NULL);
+    if (pp == NULL) {
+        return -E_INVAL;
+    }
 
-  /* Step 5: Map the physical page at 'dstva' in the address space of 'dstid'.
-   */
-  return page_insert(dstenv->env_pgdir, dstenv->env_asid, pp, dstva, perm);
+    /* Step 5: Map the physical page at 'dstva' in the address space of 'dstid'.
+     */
+    return page_insert(dstenv->env_pgdir, dstenv->env_asid, pp, dstva, perm);
 }
 
 /* Overview:
@@ -236,23 +236,24 @@ int sys_mem_map(u_int srcid, u_int srcva, u_int dstid, u_int dstva,
  *   Return the original error when underlying calls fail.
  */
 int sys_mem_unmap(u_int envid, u_int va) {
-  struct Env *e;
+    struct Env *e;
 
-  /* Step 1: Check if 'va' is a legal user virtual address using
-   * 'is_illegal_va'. */
-  /* Exercise 4.6: Your code here. (1/2) */
-  if (is_illegal_va(va)) {
-    return -E_INVAL;
-  }
+    /* Step 1: Check if 'va' is a legal user virtual address using
+     * 'is_illegal_va'. */
+    /* Exercise 4.6: Your code here. (1/2) */
+    if (is_illegal_va(va)) {
+        return -E_INVAL;
+    }
 
-  /* Step 2: Convert the envid to its corresponding 'struct Env *' using
-   * 'envid2env'. */
-  /* Exercise 4.6: Your code here. (2/2) */
-  try(envid2env(envid, &e, 0));
+    /* Step 2: Convert the envid to its corresponding 'struct Env *' using
+     * 'envid2env'. */
+    /* Exercise 4.6: Your code here. (2/2) */
+    try(envid2env(envid, &e, 0));
 
-  /* Step 3: Unmap the physical page at 'va' in the address space of 'envid'. */
-  page_remove(e->env_pgdir, e->env_asid, va);
-  return 0;
+    /* Step 3: Unmap the physical page at 'va' in the address space of 'envid'.
+     */
+    page_remove(e->env_pgdir, e->env_asid, va);
+    return 0;
 }
 
 /* Overview:
@@ -270,29 +271,38 @@ int sys_mem_unmap(u_int envid, u_int va) {
  *   This syscall works as an essential step in user-space 'fork' and 'spawn'.
  */
 int sys_exofork(void) {
-  struct Env *e;
+    struct Env *e;
 
-  /* Step 1: Allocate a new env using 'env_alloc'. */
-  /* Exercise 4.9: Your code here. (1/4) */
-  try(env_alloc(&e, curenv->env_id));
+    /* Step 1: Allocate a new env using 'env_alloc'. */
+    /* Exercise 4.9: Your code here. (1/4) */
+    try(env_alloc(&e, curenv->env_id));
 
-  /* Step 2: Copy the current Trapframe below 'KSTACKTOP' to the new env's
-   * 'env_tf'. */
-  /* Exercise 4.9: Your code here. (2/4) */
-  e->env_tf = *((struct Trapframe *)KSTACKTOP - 1);
+    /* Step 2: Copy the current Trapframe below 'KSTACKTOP' to the new env's
+     * 'env_tf'. */
+    /* Exercise 4.9: Your code here. (2/4) */
+    e->env_tf = *((struct Trapframe *)KSTACKTOP - 1);
 
-  /* Step 3: Set the new env's 'env_tf.regs[2]' to 0 to indicate the return
-   * value in child. */
-  /* Exercise 4.9: Your code here. (3/4) */
-  e->env_tf.regs[2] = 0;
+    /* Step 3: Set the new env's 'env_tf.regs[2]' to 0 to indicate the return
+     * value in child. */
+    /* Exercise 4.9: Your code here. (3/4) */
+    e->env_tf.regs[2] = 0;
 
-  /* Step 4: Set up the new env's 'env_status' and 'env_pri'.  */
-  /* Exercise 4.9: Your code here. (4/4) */
-  e->env_status = ENV_NOT_RUNNABLE;
-  e->env_pri = curenv->env_pri;
-  
+    /* Step 4: Set up the new env's 'env_status' and 'env_pri'.  */
+    /* Exercise 4.9: Your code here. (4/4) */
+    e->env_status = ENV_NOT_RUNNABLE;
+    e->env_pri = curenv->env_pri;
 
-  return e->env_id;
+    for (int i = 0; i < 16; i++) {
+        if (curenv->env_args[i].exported) {
+            strcpy(e->env_args[i].name, curenv->env_args[i].name);
+            strcpy(e->env_args[i].value, curenv->env_args[i].value);
+            e->env_args[i].exported = 1;
+            e->env_args[i].readonly = curenv->env_args[i].readonly;
+        }
+    }
+    e->args_count = curenv->args_count;
+
+    return e->env_id;
 }
 
 /* Overview:
@@ -308,34 +318,34 @@ int sys_exofork(void) {
  * envs should be maintained.
  */
 int sys_set_env_status(u_int envid, u_int status) {
-  struct Env *env;
+    struct Env *env;
 
-  /* Step 1: Check if 'status' is valid. */
-  /* Exercise 4.14: Your code here. (1/3) */
-  if (status != ENV_RUNNABLE && status != ENV_NOT_RUNNABLE) {
-    return -E_INVAL;
-  }
+    /* Step 1: Check if 'status' is valid. */
+    /* Exercise 4.14: Your code here. (1/3) */
+    if (status != ENV_RUNNABLE && status != ENV_NOT_RUNNABLE) {
+        return -E_INVAL;
+    }
 
-  /* Step 2: Convert the envid to its corresponding 'struct Env *' using
-   * 'envid2env'. */
-  /* Exercise 4.14: Your code here. (2/3) */
-  try(envid2env(envid, &env, 1));
+    /* Step 2: Convert the envid to its corresponding 'struct Env *' using
+     * 'envid2env'. */
+    /* Exercise 4.14: Your code here. (2/3) */
+    try(envid2env(envid, &env, 1));
 
-  /* Step 3: Update 'env_sched_list' if the 'env_status' of 'env' is being
-   * changed. */
-  /* Exercise 4.14: Your code here. (3/3) */
-  if (env->env_status == ENV_NOT_RUNNABLE && status == ENV_RUNNABLE) {
-    TAILQ_INSERT_HEAD(&env_sched_list, env, env_sched_link);
-  }
+    /* Step 3: Update 'env_sched_list' if the 'env_status' of 'env' is being
+     * changed. */
+    /* Exercise 4.14: Your code here. (3/3) */
+    if (env->env_status == ENV_NOT_RUNNABLE && status == ENV_RUNNABLE) {
+        TAILQ_INSERT_HEAD(&env_sched_list, env, env_sched_link);
+    }
 
-  /* Step 4: Set the 'env_status' of 'env'. */
-  env->env_status = status;
+    /* Step 4: Set the 'env_status' of 'env'. */
+    env->env_status = status;
 
-  /* Step 5: Use 'schedule' with 'yield' set if ths 'env' is 'curenv'. */
-  if (env == curenv) {
-    schedule(1);
-  }
-  return 0;
+    /* Step 5: Use 'schedule' with 'yield' set if ths 'env' is 'curenv'. */
+    if (env == curenv) {
+        schedule(1);
+    }
+    return 0;
 }
 
 /* Overview:
@@ -349,20 +359,20 @@ int sys_set_env_status(u_int envid, u_int status) {
  * underlying calls fail.
  */
 int sys_set_trapframe(u_int envid, struct Trapframe *tf) {
-  if (is_illegal_va_range((u_long)tf, sizeof *tf)) {
-    return -E_INVAL;
-  }
-  struct Env *env;
-  try(envid2env(envid, &env, 1));
-  if (env == curenv) {
-    *((struct Trapframe *)KSTACKTOP - 1) = *tf;
-    // return `tf->regs[2]` instead of 0, because return value overrides regs[2]
-    // on current trapframe.
-    return tf->regs[2];
-  } else {
-    env->env_tf = *tf;
-    return 0;
-  }
+    if (is_illegal_va_range((u_long)tf, sizeof *tf)) {
+        return -E_INVAL;
+    }
+    struct Env *env;
+    try(envid2env(envid, &env, 1));
+    if (env == curenv) {
+        *((struct Trapframe *)KSTACKTOP - 1) = *tf;
+        // return `tf->regs[2]` instead of 0, because return value overrides
+        // regs[2] on current trapframe.
+        return tf->regs[2];
+    } else {
+        env->env_tf = *tf;
+        return 0;
+    }
 }
 
 /* Overview:
@@ -382,28 +392,28 @@ void sys_panic(char *msg) { panic("%s", TRUP(msg)); }
  *   Return -E_INVAL: 'dstva' is neither 0 nor a legal address.
  */
 int sys_ipc_recv(u_int dstva) {
-  /* Step 1: Check if 'dstva' is either zero or a legal address. */
-  if (dstva != 0 && is_illegal_va(dstva)) {
-    return -E_INVAL;
-  }
+    /* Step 1: Check if 'dstva' is either zero or a legal address. */
+    if (dstva != 0 && is_illegal_va(dstva)) {
+        return -E_INVAL;
+    }
 
-  /* Step 2: Set 'curenv->env_ipc_recving' to 1. */
-  /* Exercise 4.8: Your code here. (1/8) */
-  curenv->env_ipc_recving = 1;
+    /* Step 2: Set 'curenv->env_ipc_recving' to 1. */
+    /* Exercise 4.8: Your code here. (1/8) */
+    curenv->env_ipc_recving = 1;
 
-  /* Step 3: Set the value of 'curenv->env_ipc_dstva'. */
-  /* Exercise 4.8: Your code here. (2/8) */
-  curenv->env_ipc_dstva = dstva;
+    /* Step 3: Set the value of 'curenv->env_ipc_dstva'. */
+    /* Exercise 4.8: Your code here. (2/8) */
+    curenv->env_ipc_dstva = dstva;
 
-  /* Step 4: Set the status of 'curenv' to 'ENV_NOT_RUNNABLE' and remove it from
-   * 'env_sched_list'. */
-  /* Exercise 4.8: Your code here. (3/8) */
-  curenv->env_status = ENV_NOT_RUNNABLE;
-  TAILQ_REMOVE(&env_sched_list, curenv, env_sched_link);
+    /* Step 4: Set the status of 'curenv' to 'ENV_NOT_RUNNABLE' and remove it
+     * from 'env_sched_list'. */
+    /* Exercise 4.8: Your code here. (3/8) */
+    curenv->env_status = ENV_NOT_RUNNABLE;
+    TAILQ_REMOVE(&env_sched_list, curenv, env_sched_link);
 
-  /* Step 5: Give up the CPU and block until a message is received. */
-  ((struct Trapframe *)KSTACKTOP - 1)->regs[2] = 0;
-  schedule(1);
+    /* Step 5: Give up the CPU and block until a message is received. */
+    ((struct Trapframe *)KSTACKTOP - 1)->regs[2] = 0;
+    schedule(1);
 }
 
 /* Overview:
@@ -424,59 +434,59 @@ int sys_ipc_recv(u_int dstva) {
  * fail.
  */
 int sys_ipc_try_send(u_int envid, u_int value, u_int srcva, u_int perm) {
-  struct Env *e;
-  struct Page *p;
+    struct Env *e;
+    struct Page *p;
 
-  /* Step 1: Check if 'srcva' is either zero or a legal address. */
-  /* Exercise 4.8: Your code here. (4/8) */
-  if (srcva != 0 && is_illegal_va(srcva)) {
-    return -E_INVAL;
-  }
-
-  /* Step 2: Convert 'envid' to 'struct Env *e'. */
-  /* This is the only syscall where the 'envid2env' should be used with
-   * 'checkperm' UNSET, because the target env is not restricted to 'curenv''s
-   * children. */
-  /* Exercise 4.8: Your code here. (5/8) */
-  try(envid2env(envid, &e, 0));
-
-  /* Step 3: Check if the target is waiting for a message. */
-  /* Exercise 4.8: Your code here. (6/8) */
-  if (e->env_ipc_recving == 0) {
-    return -E_IPC_NOT_RECV;
-  }
-
-  /* Step 4: Set the target's ipc fields. */
-  e->env_ipc_value = value;
-  e->env_ipc_from = curenv->env_id;
-  e->env_ipc_perm = PTE_V | perm;
-  e->env_ipc_recving = 0;
-
-  /* Step 5: Set the target's status to 'ENV_RUNNABLE' again and insert it to
-   * the tail of 'env_sched_list'. */
-  /* Exercise 4.8: Your code here. (7/8) */
-  e->env_status = ENV_RUNNABLE;
-  TAILQ_INSERT_TAIL(&env_sched_list, e, env_sched_link);
-
-  /* Step 6: If 'srcva' is not zero, map the page at 'srcva' in 'curenv' to
-   * 'e->env_ipc_dstva' in 'e'. */
-  /* Return -E_INVAL if 'srcva' is not zero and not mapped in 'curenv'. */
-  if (srcva != 0) {
-    /* Exercise 4.8: Your code here. (8/8) */
-    if ((p = page_lookup(curenv->env_pgdir, srcva, NULL)) == NULL) {
-      return -E_INVAL;
+    /* Step 1: Check if 'srcva' is either zero or a legal address. */
+    /* Exercise 4.8: Your code here. (4/8) */
+    if (srcva != 0 && is_illegal_va(srcva)) {
+        return -E_INVAL;
     }
-    try(page_insert(e->env_pgdir, e->env_asid, p, e->env_ipc_dstva, perm));
-  }
-  return 0;
+
+    /* Step 2: Convert 'envid' to 'struct Env *e'. */
+    /* This is the only syscall where the 'envid2env' should be used with
+     * 'checkperm' UNSET, because the target env is not restricted to 'curenv''s
+     * children. */
+    /* Exercise 4.8: Your code here. (5/8) */
+    try(envid2env(envid, &e, 0));
+
+    /* Step 3: Check if the target is waiting for a message. */
+    /* Exercise 4.8: Your code here. (6/8) */
+    if (e->env_ipc_recving == 0) {
+        return -E_IPC_NOT_RECV;
+    }
+
+    /* Step 4: Set the target's ipc fields. */
+    e->env_ipc_value = value;
+    e->env_ipc_from = curenv->env_id;
+    e->env_ipc_perm = PTE_V | perm;
+    e->env_ipc_recving = 0;
+
+    /* Step 5: Set the target's status to 'ENV_RUNNABLE' again and insert it to
+     * the tail of 'env_sched_list'. */
+    /* Exercise 4.8: Your code here. (7/8) */
+    e->env_status = ENV_RUNNABLE;
+    TAILQ_INSERT_TAIL(&env_sched_list, e, env_sched_link);
+
+    /* Step 6: If 'srcva' is not zero, map the page at 'srcva' in 'curenv' to
+     * 'e->env_ipc_dstva' in 'e'. */
+    /* Return -E_INVAL if 'srcva' is not zero and not mapped in 'curenv'. */
+    if (srcva != 0) {
+        /* Exercise 4.8: Your code here. (8/8) */
+        if ((p = page_lookup(curenv->env_pgdir, srcva, NULL)) == NULL) {
+            return -E_INVAL;
+        }
+        try(page_insert(e->env_pgdir, e->env_asid, p, e->env_ipc_dstva, perm));
+    }
+    return 0;
 }
 
 // XXX: kernel does busy waiting here, blocking all envs
 int sys_cgetc(void) {
-  int ch;
-  while ((ch = scancharc()) == 0) {
-  }
-  return ch;
+    int ch;
+    while ((ch = scancharc()) == 0) {
+    }
+    return ch;
 }
 
 /* Overview:
@@ -512,36 +522,36 @@ int sys_cgetc(void) {
  *	* ---------------------------------*
  */
 int sys_write_dev(u_int va, u_int pa, u_int len) {
-  /* Exercise 5.1: Your code here. (1/2) */
-  if (is_illegal_va_range(va, len)) {
-    return -E_INVAL;
-  }
-  if (!(len == 1 || len == 2 || len == 4)) {
-    return -E_INVAL;
-  }
-  if (pa >= 0x180003f8 && pa + len <= 0x180003f8 + 0x20) {
-    /* console */
-    if (len == 1) {
-      iowrite8(*(uint8_t *)va, pa);
-    } else if (len == 2) {
-      iowrite16(*(uint16_t *)va, pa);
-    } else if (len == 4) {
-      iowrite32(*(uint32_t *)va, pa);
+    /* Exercise 5.1: Your code here. (1/2) */
+    if (is_illegal_va_range(va, len)) {
+        return -E_INVAL;
     }
-  } else if (pa >= 0x180001f0 && pa + len <= 0x180001f0 + 0x8) {
-    /* IDE disk */
-    if (len == 1) {
-      iowrite8(*(uint8_t *)va, pa);
-    } else if (len == 2) {
-      iowrite16(*(uint16_t *)va, pa);
-    } else if (len == 4) {
-      iowrite32(*(uint32_t *)va, pa);
+    if (!(len == 1 || len == 2 || len == 4)) {
+        return -E_INVAL;
     }
-  } else {
-    return -E_INVAL;
-  }
+    if (pa >= 0x180003f8 && pa + len <= 0x180003f8 + 0x20) {
+        /* console */
+        if (len == 1) {
+            iowrite8(*(uint8_t *)va, pa);
+        } else if (len == 2) {
+            iowrite16(*(uint16_t *)va, pa);
+        } else if (len == 4) {
+            iowrite32(*(uint32_t *)va, pa);
+        }
+    } else if (pa >= 0x180001f0 && pa + len <= 0x180001f0 + 0x8) {
+        /* IDE disk */
+        if (len == 1) {
+            iowrite8(*(uint8_t *)va, pa);
+        } else if (len == 2) {
+            iowrite16(*(uint16_t *)va, pa);
+        } else if (len == 4) {
+            iowrite32(*(uint32_t *)va, pa);
+        }
+    } else {
+        return -E_INVAL;
+    }
 
-  return 0;
+    return 0;
 }
 
 /* Overview:
@@ -561,36 +571,36 @@ int sys_write_dev(u_int va, u_int pa, u_int len) {
  * device.
  */
 int sys_read_dev(u_int va, u_int pa, u_int len) {
-  /* Exercise 5.1: Your code here. (2/2) */
-  if (is_illegal_va_range(va, len)) {
-    return -E_INVAL;
-  }
-  if (!(len == 1 || len == 2 || len == 4)) {
-    return -E_INVAL;
-  }
-  if (pa >= 0x180003f8 && pa + len <= 0x180003f8 + 0x20) {
-    /* console */
-    if (len == 1) {
-      *(uint8_t *)va = ioread8(pa);
-    } else if (len == 2) {
-      *(uint16_t *)va = ioread16(pa);
-    } else if (len == 4) {
-      *(uint32_t *)va = ioread32(pa);
+    /* Exercise 5.1: Your code here. (2/2) */
+    if (is_illegal_va_range(va, len)) {
+        return -E_INVAL;
     }
-  } else if (pa >= 0x180001f0 && pa + len <= 0x180001f0 + 0x8) {
-    /* IDE disk */
-    if (len == 1) {
-      *(uint8_t *)va = ioread8(pa);
-    } else if (len == 2) {
-      *(uint16_t *)va = ioread16(pa);
-    } else if (len == 4) {
-      *(uint32_t *)va = ioread32(pa);
+    if (!(len == 1 || len == 2 || len == 4)) {
+        return -E_INVAL;
     }
-  } else {
-    return -E_INVAL;
-  }
+    if (pa >= 0x180003f8 && pa + len <= 0x180003f8 + 0x20) {
+        /* console */
+        if (len == 1) {
+            *(uint8_t *)va = ioread8(pa);
+        } else if (len == 2) {
+            *(uint16_t *)va = ioread16(pa);
+        } else if (len == 4) {
+            *(uint32_t *)va = ioread32(pa);
+        }
+    } else if (pa >= 0x180001f0 && pa + len <= 0x180001f0 + 0x8) {
+        /* IDE disk */
+        if (len == 1) {
+            *(uint8_t *)va = ioread8(pa);
+        } else if (len == 2) {
+            *(uint16_t *)va = ioread16(pa);
+        } else if (len == 4) {
+            *(uint32_t *)va = ioread32(pa);
+        }
+    } else {
+        return -E_INVAL;
+    }
 
-  return 0;
+    return 0;
 }
 
 /* Overview:
@@ -609,36 +619,37 @@ int sys_read_dev(u_int va, u_int pa, u_int len) {
 static int safe_copy_to_user(void *dst, const void *src, size_t len) {
     u_long dst_va = (u_long)dst;
     u_long src_va = (u_long)src;
-    
+
     // 检查目标地址是否在用户空间
     if (is_illegal_va_range(dst_va, len)) {
         return -E_INVAL;
     }
-    
+
     // 检查源地址是否在内核空间
     if (src_va < ULIM) {
         return -E_INVAL;
     }
-    
+
     if (curenv == NULL) {
         return -E_BAD_ENV;
     }
-    
+
     // 逐页拷贝，确保每页都有写权限
     size_t copied = 0;
     while (copied < len) {
         u_long page_start = (dst_va + copied) & ~(PAGE_SIZE - 1);
         u_long page_offset = (dst_va + copied) - page_start;
         size_t page_remain = PAGE_SIZE - page_offset;
-        size_t to_copy = (len - copied < page_remain) ? (len - copied) : page_remain;
-        
+        size_t to_copy =
+            (len - copied < page_remain) ? (len - copied) : page_remain;
+
         // 检查页面是否映射且可写
         Pte *pte;
         struct Page *pp = page_lookup(curenv->env_pgdir, page_start, &pte);
         if (pp == NULL || !(*pte & PTE_V)) {
             return -E_INVAL;
         }
-        
+
         // 如果页面没有写权限，临时添加写权限
         int need_restore_perm = 0;
         if (!(*pte & PTE_D)) {
@@ -646,19 +657,19 @@ static int safe_copy_to_user(void *dst, const void *src, size_t len) {
             need_restore_perm = 1;
             tlb_invalidate(curenv->env_asid, page_start);
         }
-        
+
         // 执行实际拷贝
         memcpy((void *)(dst_va + copied), (void *)(src_va + copied), to_copy);
-        
+
         // 恢复原来的权限
         if (need_restore_perm) {
             *pte &= ~PTE_D;
             tlb_invalidate(curenv->env_asid, page_start);
         }
-        
+
         copied += to_copy;
     }
-    
+
     return 0;
 }
 
@@ -677,41 +688,42 @@ static int safe_copy_to_user(void *dst, const void *src, size_t len) {
 static int safe_copy_from_user(void *dst, const void *src, size_t len) {
     u_long src_va = (u_long)src;
     u_long dst_va = (u_long)dst;
-    
+
     // 检查源地址是否在用户空间
     if (is_illegal_va_range(src_va, len)) {
         return -E_INVAL;
     }
-    
+
     // 检查目标地址是否在内核空间
     if (dst_va < ULIM) {
         return -E_INVAL;
     }
-    
+
     if (curenv == NULL) {
         return -E_BAD_ENV;
     }
-    
+
     // 逐页拷贝，确保每页都可读
     size_t copied = 0;
     while (copied < len) {
         u_long page_start = (src_va + copied) & ~(PAGE_SIZE - 1);
         u_long page_offset = (src_va + copied) - page_start;
         size_t page_remain = PAGE_SIZE - page_offset;
-        size_t to_copy = (len - copied < page_remain) ? (len - copied) : page_remain;
-        
+        size_t to_copy =
+            (len - copied < page_remain) ? (len - copied) : page_remain;
+
         // 检查页面是否映射且可读
         struct Page *pp = page_lookup(curenv->env_pgdir, page_start, NULL);
         if (pp == NULL) {
             return -E_INVAL;
         }
-        
+
         // 执行实际拷贝
         memcpy((void *)(dst_va + copied), (void *)(src_va + copied), to_copy);
-        
+
         copied += to_copy;
     }
-    
+
     return 0;
 }
 
@@ -720,21 +732,21 @@ int sys_get_dir(char *path) {
     if (path == NULL) {
         return -E_INVAL;
     }
-    
+
     // 检查地址范围，确保在用户空间
     if (is_illegal_va_range((u_long)path, MAXPATHLEN)) {
         return -E_INVAL;
     }
-    
+
     if (curenv == NULL) {
         return -E_BAD_ENV;
     }
-    
+
     // 确保 curenv->work_dir 初始化
     if (curenv->work_dir[0] == '\0') {
         strcpy(curenv->work_dir, "/");
     }
-    
+
     // 安全地复制工作目录到用户空间
     int len = strlen(curenv->work_dir);
     if (len >= MAXPATHLEN) {
@@ -747,29 +759,112 @@ int sys_get_dir(char *path) {
 
 int sys_ch_dir(const char *path) {
     // char temp_path[MAXPATHLEN];
-    
+
     // 检查参数有效性
     if (path == NULL) {
         return -E_INVAL;
     }
-    
+
     // 检查地址范围
     if (is_illegal_va_range((u_long)path, MAXPATHLEN)) {
         return -E_INVAL;
     }
-    
+
     if (curenv == NULL) {
         return -E_BAD_ENV;
     }
-    
+
     int len = strlen(path);
     if (len >= sizeof(curenv->work_dir)) {
         return -E_INVAL;
     }
-    
+
     // 设置工作目录
     strcpy(curenv->work_dir, path);
-    
+
+    return 0;
+}
+
+static int get_args_index(const char *name) {
+    for (int i = 0; i < MAX_ARGS; i++) {
+        if (strcmp(curenv->env_args[i].name, name) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int sys_set_args(const char *name, const char *value, int reported,
+                 int readonly) {
+    if (name == NULL) {
+        return -E_INVAL;
+    }
+
+    int index = get_args_index(name);
+    if (index < 0) {
+        curenv->args_count++;
+        if (curenv->args_count > MAX_ARGS) {
+            curenv->args_count--; // 恢复计数
+            return -E_ARGS_FULL;  // 参数数量超过限制
+        }
+
+        curenv->env_args[curenv->args_count].exported = reported;
+        curenv->env_args[curenv->args_count].readonly = readonly;
+        strcpy(curenv->env_args[curenv->args_count].name, name);
+        strcpy(curenv->env_args[curenv->args_count].value, value);
+        curenv->args_count++;
+    } else {
+        if (curenv->env_args[index].readonly) {
+            return -E_ARGS_RO; // 不允许修改只读参数
+        }
+        curenv->env_args[index].exported = reported;
+        curenv->env_args[index].readonly = readonly;
+        strcpy(curenv->env_args[index].value, value);
+    }
+
+    return 0;
+}
+
+int sys_get_args(const char *name, char *value) {
+    int index = get_args_index(name);
+    if (index < 0) {
+        *value = '\0';   // 如果未找到，返回空字符串
+        return -E_INVAL; // 参数未找到
+    }
+    strcpy(value, curenv->env_args[index].value);
+    return 0;
+}
+
+int sys_all_args(char names[][], char values[][]) {
+    if (names == NULL || values == NULL) {
+        return -E_INVAL; // 参数无效
+    }
+
+    for (int i = 0; i < curenv->args_count; i++) {
+        strcpy(names[i], curenv->env_args[i].name);
+        strcpy(values[i], curenv->env_args[i].value);
+    }
+    return curenv->args_count; // 返回参数数量
+}
+
+int sys_unset_args(const char *name) {
+    if (name == NULL) {
+        return -E_INVAL; // 参数无效
+    }
+
+    int index = get_args_index(name);
+    if (index < 0) {
+        return -E_INVAL; // 参数未找到
+    }
+
+    // 清除参数
+    curenv->env_args[index].exported = 0;
+    curenv->env_args[index].readonly = 0;
+    curenv->env_args[index].name[0] = '\0';
+    curenv->env_args[index].value[0] = '\0';
+
+    // 更新参数计数
+    curenv->args_count--;
     return 0;
 }
 
@@ -794,6 +889,10 @@ void *syscall_table[MAX_SYSNO] = {
     [SYS_read_dev] = sys_read_dev,
     [SYS_get_dir] = sys_get_dir,
     [SYS_ch_dir] = sys_ch_dir,
+    [SYS_set_args] = sys_set_args,
+    [SYS_get_args] = sys_get_args,
+    [SYS_all_args] = sys_all_args,
+    [SYS_unset_args] = sys_unset_args,
 };
 
 /* Overview:
@@ -806,36 +905,36 @@ void *syscall_table[MAX_SYSNO] = {
  * + 20 bytes] in order. Number of arguments cannot exceed 5.
  */
 void do_syscall(struct Trapframe *tf) {
-  int (*func)(u_int, u_int, u_int, u_int, u_int);
-  int sysno = tf->regs[4];
-  if (sysno < 0 || sysno >= MAX_SYSNO) {
-    tf->regs[2] = -E_NO_SYS;
-    return;
-  }
+    int (*func)(u_int, u_int, u_int, u_int, u_int);
+    int sysno = tf->regs[4];
+    if (sysno < 0 || sysno >= MAX_SYSNO) {
+        tf->regs[2] = -E_NO_SYS;
+        return;
+    }
 
-  /* Step 1: Add the EPC in 'tf' by a word (size of an instruction). */
-  /* Exercise 4.2: Your code here. (1/4) */
-  tf->cp0_epc += 4;
+    /* Step 1: Add the EPC in 'tf' by a word (size of an instruction). */
+    /* Exercise 4.2: Your code here. (1/4) */
+    tf->cp0_epc += 4;
 
-  /* Step 2: Use 'sysno' to get 'func' from 'syscall_table'. */
-  /* Exercise 4.2: Your code here. (2/4) */
-  func = syscall_table[sysno];
+    /* Step 2: Use 'sysno' to get 'func' from 'syscall_table'. */
+    /* Exercise 4.2: Your code here. (2/4) */
+    func = syscall_table[sysno];
 
-  /* Step 3: First 3 args are stored in $a1, $a2, $a3. */
-  u_int arg1 = tf->regs[5];
-  u_int arg2 = tf->regs[6];
-  u_int arg3 = tf->regs[7];
+    /* Step 3: First 3 args are stored in $a1, $a2, $a3. */
+    u_int arg1 = tf->regs[5];
+    u_int arg2 = tf->regs[6];
+    u_int arg3 = tf->regs[7];
 
-  /* Step 4: Last 2 args are stored in stack at [$sp + 16 bytes], [$sp + 20
-   * bytes]. */
-  u_int arg4, arg5;
-  /* Exercise 4.2: Your code here. (3/4) */
-  arg4 = *(u_int *)(tf->regs[29] + 16);
-  arg5 = *(u_int *)(tf->regs[29] + 20);
+    /* Step 4: Last 2 args are stored in stack at [$sp + 16 bytes], [$sp + 20
+     * bytes]. */
+    u_int arg4, arg5;
+    /* Exercise 4.2: Your code here. (3/4) */
+    arg4 = *(u_int *)(tf->regs[29] + 16);
+    arg5 = *(u_int *)(tf->regs[29] + 20);
 
-  /* Step 5: Invoke 'func' with retrieved arguments and store its return value
-   * to $v0 in 'tf'.
-   */
-  /* Exercise 4.2: Your code here. (4/4) */
-  tf->regs[2] = func(arg1, arg2, arg3, arg4, arg5);
+    /* Step 5: Invoke 'func' with retrieved arguments and store its return value
+     * to $v0 in 'tf'.
+     */
+    /* Exercise 4.2: Your code here. (4/4) */
+    tf->regs[2] = func(arg1, arg2, arg3, arg4, arg5);
 }

@@ -24,6 +24,10 @@ enum {
 	SYS_read_dev,
 	SYS_get_dir,
 	SYS_ch_dir,
+	SYS_get_args,
+	SYS_set_args,
+	SYS_all_args,
+	SYS_unset_args,
 	MAX_SYSNO,
 };
 

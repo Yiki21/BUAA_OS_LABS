@@ -251,6 +251,14 @@ int env_alloc(struct Env **new, u_int parent_id) {
     e->env_parent_id = parent_id;
     e->ret_code = 0;
     
+    for (int i = 0; i < 16; i++) {
+        e->env_args[i].name[0] = '\0'; // 初始化环境参数
+        e->env_args[i].value[0] = '\0';
+        e->env_args[i].exported = 0;
+        e->env_args[i].readonly = 0;
+    }
+    e->args_count = 0;
+    
     /* Step 4: Initialize work directory - 使用 memset 先清零 */
     memset(e->work_dir, 0, sizeof(e->work_dir));
     
