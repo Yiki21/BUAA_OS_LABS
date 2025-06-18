@@ -182,12 +182,12 @@ int sh_cd(int argc, char **args) {
 
     struct Stat s;
     if (stat(new_path, &s) < 0) {
-        printf("cd: The directory '%s' does not exist.\n", new_path);
+        printf("cd: The directory '%s' does not exist.\n", args[1]);
         return 1;
     }
 
     if (!s.st_isdir) {
-        printf("cd: '%s' is not a directory.\n", new_path);
+        printf("cd: '%s' is not a directory.\n", args[1]);
         return 1;
     }
 

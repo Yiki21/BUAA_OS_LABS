@@ -185,6 +185,8 @@ void env_init(void) {
     
     // 确保 envs 数组完全映射，并且在内核中有写权限
     u_int envs_size = ROUND(NENV * sizeof(struct Env), PAGE_SIZE);
+    // printk("Env size: %u, total envs size: %u pages\n", 
+    //        sizeof(struct Env), envs_size / PAGE_SIZE);
     map_segment(base_pgdir, 0, PADDR(envs), UENVS, envs_size, PTE_G);
 }
 

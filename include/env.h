@@ -41,7 +41,8 @@ struct Env {
 	u_int env_runs; // number of times we've been env_run'ed
 	char work_dir[128]; // working directory for this env
 	int ret_code; // return code for this env
-};
+	
+} ;  // 添加 packed 属性确保布局一致
 
 LIST_HEAD(Env_list, Env);
 TAILQ_HEAD(Env_sched_list, Env);

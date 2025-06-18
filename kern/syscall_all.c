@@ -74,13 +74,23 @@ void __attribute__((noreturn)) sys_yield(void) {
  *  Returns the original error if underlying calls fail.
  */
 int sys_env_destroy(u_int envid, int status) {
-  struct Env *e;
-  e->ret_code = status;
-  try(envid2env(envid, &e, 1));
-
-  //printk("[%08x] destroying %08x\n", curenv->env_id, e->env_id);
-  env_destroy(e);
-  return 0;
+    struct Env *e;
+    
+    //printk("sys_env_destroy: envid=0x%x, status=%d\n", envid, status);
+    
+    try(envid2env(envid, &e, 1));
+    
+    // 检查 e 指针是否有效
+    if (!e || (u_long)e < ULIM) {
+        //printk("ERROR: Invalid env pointer in sys_env_destroy: %p\n", e);
+        return -E_BAD_ENV;
+    }
+    
+    e->ret_code = status;
+    
+    //printk("sys_env_destroy: destroying env %p (id=0x%x)\n", e, e->env_id);
+    env_destroy(e);
+    return 0;
 }
 
 /* Overview:
