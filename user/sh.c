@@ -77,6 +77,7 @@ int main(int argc, char **argv) {
         trim(buf);
         expand_vars(buf);
         remove_comments(buf);
+        //debugf("Input line: '%s'\n", buf);
 
         if (buf[0] == '\0' || buf[0] == '#') {
             continue; // 空行
@@ -161,10 +162,13 @@ int run_builtin(char **args) {
     while (args[argc])
         argc++;
 
+    //debugf("Running builtin command: %s with %d args\n", args[0], argc);
+
     return builtin_func[builtin_index](argc, args);
 }
 
 int chdir(const char *path) {
+    // debugf("Changed directory to %s\n", path);
     if (syscall_ch_dir(path) < 0) {
         debugf("chdir %s failed\n", path);
         return -1;
@@ -173,6 +177,9 @@ int chdir(const char *path) {
 }
 
 int sh_cd(int argc, char **args) {
+    static char cur_path[MAXPATHLEN];  // 使用静态分配
+    static char new_path[MAXPATHLEN];
+    
     if (args[1] == NULL) {
         chdir("/");
         return 0;
@@ -183,9 +190,7 @@ int sh_cd(int argc, char **args) {
         return 1;
     }
 
-    char cur_path[MAXPATHLEN];
     syscall_get_dir(cur_path);
-    char new_path[MAXPATHLEN];
     resolve_path(args[1], cur_path, new_path, sizeof(new_path));
 
     struct Stat s;
@@ -198,7 +203,7 @@ int sh_cd(int argc, char **args) {
         printf("cd: '%s' is not a directory.\n", args[1]);
         return 1;
     }
-
+    
     chdir(new_path);
     return 0;
 }
@@ -299,6 +304,8 @@ int run_with_logic(char *line) {
 
     for (int i = 0; i < n; i++) {
         int status = run_single_command(seg[i]);
+
+        //debugf("Command %d returned status: %d\n", i, status);
 
         // 如果是 &&，上一条失败就停止
         if (i < n - 1 && ops[i] == '&' && status != 0)
@@ -411,6 +418,7 @@ int run_pipeline(char *cmds[], int index, int ncmds, int input_fd) {
                 dup(out_fd, 1);
                 close(out_fd);
             }
+            //debugf("Running builtin command: %s\n", args[0]);
             return run_builtin(args);
         }
 
@@ -489,7 +497,7 @@ void expand_vars(char *line) {
             int j = 0;
 
             // 提取变量名
-            while (*p && !strchr(WHITESPACE SYMBOLS, *p) &&
+            while (*p && !strchr(WHITESPACE SYMBOLS"/", *p) &&
                    j < sizeof(varname) - 1) {
                 varname[j++] = *p++;
             }

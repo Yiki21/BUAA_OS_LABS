@@ -782,6 +782,8 @@ int sys_ch_dir(const char *path) {
     // 设置工作目录
     strcpy(curenv->work_dir, path);
 
+    //printk("sys_ch_dir: work_dir = %s\n", curenv->work_dir);
+
     return 0;
 }
 
