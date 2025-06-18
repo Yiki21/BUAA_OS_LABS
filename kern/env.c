@@ -156,19 +156,17 @@ void env_init(void) {
     int i;
     /* Step 1: Initialize 'env_free_list' with 'LIST_INIT' and 'env_sched_list' with
      * 'TAILQ_INIT'. */
-    /* Exercise 3.1: Your code here. (1/2) */
     LIST_INIT(&env_free_list);
     TAILQ_INIT(&env_sched_list);
+    
     /* Step 2: Traverse the elements of 'envs' array, set their status to 'ENV_FREE' and insert
      * them into the 'env_free_list'. Make sure, after the insertion, the order of envs in the
      * list should be the same as they are in the 'envs' array. */
-
-    /* Exercise 3.1: Your code here. (2/2) */
     for (i = NENV - 1; i >= 0; i--) {
         envs[i].env_status = ENV_FREE;
-        // envs[i].env_id = mkenvid(&envs[i]);
         LIST_INSERT_HEAD(&env_free_list, &envs[i], env_link);
     }
+    
     /*
      * We want to map 'UPAGES' and 'UENVS' to *every* user space with PTE_G permission (without
      * PTE_D), then user programs can read (but cannot write) kernel data structures 'pages' and
@@ -184,8 +182,10 @@ void env_init(void) {
     base_pgdir = (Pde *)page2kva(p);
     map_segment(base_pgdir, 0, PADDR(pages), UPAGES, ROUND(npage * sizeof(struct Page), PAGE_SIZE),
                 PTE_G);
-    map_segment(base_pgdir, 0, PADDR(envs), UENVS, ROUND(NENV * sizeof(struct Env), PAGE_SIZE),
-                PTE_G);
+    
+    // 确保 envs 数组完全映射，并且在内核中有写权限
+    u_int envs_size = ROUND(NENV * sizeof(struct Env), PAGE_SIZE);
+    map_segment(base_pgdir, 0, PADDR(envs), UENVS, envs_size, PTE_G);
 }
 
 /* Overview:
@@ -193,26 +193,18 @@ void env_init(void) {
  */
 static int env_setup_vm(struct Env *e) {
     /* Step 1:
-     *   Allocate a page for the page directory with 'page_alloc'.
-     *   Increase its 'pp_ref' and assign its kernel address to 'e->env_pgdir'.
-     *
-     * Hint:
-     *   You can get the kernel address of a specified physical page using 'page2kva'.
+     * Allocate a page for the page directory with 'page_alloc'.
+     * Increase its 'pp_ref' and assign its kernel address to 'e->env_pgdir'.
      */
     struct Page *p;
     try(page_alloc(&p));
-    /* Exercise 3.3: Your code here. */
     p->pp_ref++;
     e->env_pgdir = (Pde *)page2kva(p);
+    
     /* Step 2: Copy the template page directory 'base_pgdir' to 'e->env_pgdir'. */
-    /* Hint:
-     *   As a result, the address space of all envs is identical in [UTOP, UVPT).
-     *   See include/mmu.h for layout.
-     */
     memcpy(e->env_pgdir + PDX(UTOP), base_pgdir + PDX(UTOP), sizeof(Pde) * (PDX(UVPT) - PDX(UTOP)));
 
-    /* Step 3: Map its own page table at 'UVPT' with readonly permission.
-     * As a result, user programs can read its page table through 'UVPT' */
+    /* Step 3: Map its own page table at 'UVPT' with readonly permission. */
     e->env_pgdir[PDX(UVPT)] = PADDR(e->env_pgdir) | PTE_V;
     return 0;
 }
@@ -241,43 +233,52 @@ int env_alloc(struct Env **new, u_int parent_id) {
     struct Env *e;
 
     /* Step 1: Get a free Env from 'env_free_list' */
-    /* Exercise 3.4: Your code here. (1/4) */
     if ((e = LIST_FIRST(&env_free_list)) == NULL) {
         return -E_NO_FREE_ENV;
     }
+    
     /* Step 2: Call a 'env_setup_vm' to initialize the user address space for this new Env. */
-    /* Exercise 3.4: Your code here. (2/4) */
     if (env_setup_vm(e) != 0) {
         return -E_NO_FREE_ENV;
     }
-    /* Step 3: Initialize these fields for the new Env with appropriate values:
-     *   'env_user_tlb_mod_entry' (lab4), 'env_runs' (lab6), 'env_id' (lab3), 'env_asid' (lab3),
-     *   'env_parent_id' (lab3)
-     *
-     * Hint:
-     *   Use 'asid_alloc' to allocate a free asid.
-     *   Use 'mkenvid' to allocate a free envid.
-     */
+    
+    /* Step 3: Initialize these fields for the new Env with appropriate values */
     e->env_user_tlb_mod_entry = 0;  // for lab4
     e->env_runs = 0;                // for lab6
-    /* Exercise 3.4: Your code here. (3/4) */
     e->env_id = mkenvid(e);
     e->env_parent_id = parent_id;
-    if (asid_alloc(&e->env_asid) == E_NO_FREE_ENV) {
+    e->ret_code = 0;
+    
+    /* Step 4: Initialize work directory - 使用 memset 先清零 */
+    memset(e->work_dir, 0, sizeof(e->work_dir));
+    
+    if (parent_id == 0) {
+        // 初始进程或没有父进程的进程，设置为根目录
+        e->work_dir[0] = '/';
+        e->work_dir[1] = '\0';
+    } else {
+        // 有父进程的情况，继承父进程的工作目录
+        struct Env *parent_env;
+        if (envid2env(parent_id, &parent_env, 0) == 0 && parent_env != NULL) {
+            // 成功获取父进程，继承其工作目录
+            strcpy(e->work_dir, parent_env->work_dir);
+            e->work_dir[sizeof(e->work_dir) - 1] = '\0';
+        } else {
+            // 无法获取父进程信息，设置为根目录
+            e->work_dir[0] = '/';
+            e->work_dir[1] = '\0';
+        }
+    }
+    
+    if (asid_alloc(&e->env_asid) != 0) {
         return -E_NO_FREE_ENV;
     }
-    /* Step 4: Initialize the sp and 'cp0_status' in 'e->env_tf'.
-     *   Set the EXL bit to ensure that the processor remains in kernel mode during context
-     * recovery. Additionally, set UM to 1 so that when ERET unsets EXL, the processor
-     * transitions to user mode.
-     */
+    
+    /* Step 5: Initialize the sp and 'cp0_status' in 'e->env_tf' */
     e->env_tf.cp0_status = STATUS_IM7 | STATUS_IE | STATUS_EXL | STATUS_UM;
-    // Reserve space for 'argc' and 'argv'.
     e->env_tf.regs[29] = USTACKTOP - sizeof(int) - sizeof(char **);
 
-    /* Step 5: Remove the new Env from env_free_list. */
-    /* Exercise 3.4: Your code here. (4/4) */
-
+    /* Step 6: Remove the new Env from env_free_list. */
     LIST_REMOVE(e, env_link);
     *new = e;
     return 0;
@@ -366,18 +367,16 @@ static void load_icode(struct Env *e, const void *binary, size_t size) {
 struct Env *env_create(const void *binary, size_t size, int priority) {
     struct Env *e;
     /* Step 1: Use 'env_alloc' to alloc a new env, with 0 as 'parent_id'. */
-    /* Exercise 3.7: Your code here. (1/3) */
-    if (env_alloc(&e, 0) == -E_NO_FREE_ENV) {
+    if (env_alloc(&e, 0) != 0) {
         panic("env_create: no free env");
         return NULL;
     }
     /* Step 2: Assign the 'priority' to 'e' and mark its 'env_status' as runnable. */
-    /* Exercise 3.7: Your code here. (2/3) */
     e->env_pri = priority;
     e->env_status = ENV_RUNNABLE;
+    
     /* Step 3: Use 'load_icode' to load the image from 'binary', and insert 'e' into
      * 'env_sched_list' using 'TAILQ_INSERT_HEAD'. */
-    /* Exercise 3.7: Your code here. (3/3) */
     load_icode(e, binary, size);
     TAILQ_INSERT_HEAD(&env_sched_list, e, env_sched_link);
 
@@ -392,7 +391,7 @@ void env_free(struct Env *e) {
     u_int pdeno, pteno, pa;
 
     /* Hint: Note the environment's demise.*/
-    printk("[%08x] free env %08x\n", curenv ? curenv->env_id : 0, e->env_id);
+    //printk("[%08x] free env %08x\n", curenv ? curenv->env_id : 0, e->env_id);
 
     /* Hint: Flush all mapped pages in the user portion of the address space */
     for (pdeno = 0; pdeno < PDX(UTOP); pdeno++) {
@@ -425,6 +424,7 @@ void env_free(struct Env *e) {
     e->env_status = ENV_FREE;
     LIST_INSERT_HEAD((&env_free_list), (e), env_link);
     TAILQ_REMOVE(&env_sched_list, (e), env_sched_link);
+    //printk("env %d freed\n", e->env_id);
 }
 
 /* Overview:
@@ -436,8 +436,9 @@ void env_destroy(struct Env *e) {
 
     /* Hint: schedule to run a new environment. */
     if (curenv == e) {
+        //printk("env_destroy: current env %d destroyed\n", e->env_id);
         curenv = NULL;
-        printk("i am killed ... \n");
+        //printk("i am killed ... \n");
         schedule(1);
     }
 }
@@ -472,8 +473,9 @@ __attribute__((noreturn)) void env_run(struct Env *e) {
      *   If not, we may be switching from a previous env, so save its context into
      *   'curenv->env_tf' first.
      */
-    if (curenv) {
-        curenv->env_tf = *((struct Trapframe *)KSTACKTOP - 1);
+    if (curenv != NULL) {
+        struct Trapframe *tf = (struct Trapframe *)KSTACKTOP - 1;
+        curenv->env_tf = *tf;
     }
 
     /* Step 2: Change 'curenv' to 'e'. */

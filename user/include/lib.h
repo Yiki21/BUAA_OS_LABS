@@ -14,7 +14,7 @@
 #define pages ((const volatile struct Page *)UPAGES)
 
 // libos
-void exit(void) __attribute__((noreturn));
+void exit(int) __attribute__((noreturn));
 
 extern const volatile struct Env *env;
 
@@ -42,6 +42,7 @@ void _user_halt(const char *, int, const char *, ...) __attribute__((noreturn));
 int spawn(char *prog, char **argv);
 int spawnl(char *prot, char *args, ...);
 int fork(void);
+int spawn_abs(char *prog, char **argv);
 
 /// syscalls
 extern int msyscall(int, ...);
@@ -50,7 +51,7 @@ void syscall_putchar(int ch);
 int syscall_print_cons(const void *str, u_int num);
 u_int syscall_getenvid(void);
 void syscall_yield(void);
-int syscall_env_destroy(u_int envid);
+int syscall_env_destroy(int ret_code, u_int envid);
 int syscall_set_tlb_mod_entry(u_int envid, void (*func)(struct Trapframe *));
 int syscall_mem_alloc(u_int envid, void *va, u_int perm);
 int syscall_mem_map(u_int srcid, void *srcva, u_int dstid, void *dstva, u_int perm);
@@ -74,7 +75,7 @@ void ipc_send(u_int whom, u_int val, const void *srcva, u_int perm);
 u_int ipc_recv(u_int *whom, void *dstva, u_int *perm);
 
 // wait.c
-void wait(u_int envid);
+int wait(u_int envid);
 
 // console.c
 int opencons(void);
@@ -118,6 +119,10 @@ int read_map(int fd, u_int offset, void **blk);
 int remove(const char *path);
 int ftruncate(int fd, u_int size);
 int sync(void);
+int open_abs(const char *path, int mode);
+
+int syscall_get_dir(char *path);
+int syscall_ch_dir(const char *path);
 
 #define user_assert(x)                                                                             \
 	do {                                                                                       \

@@ -14,8 +14,8 @@ u_int syscall_getenvid(void) { return msyscall(SYS_getenvid); }
 
 void syscall_yield(void) { msyscall(SYS_yield); }
 
-int syscall_env_destroy(u_int envid) {
-  return msyscall(SYS_env_destroy, envid);
+int syscall_env_destroy(int ret_code, u_int envid) {
+  return msyscall(SYS_env_destroy, ret_code, envid);
 }
 
 int syscall_set_tlb_mod_entry(u_int envid, void (*func)(struct Trapframe *)) {
@@ -65,4 +65,12 @@ int syscall_write_dev(void *va, u_int dev, u_int size) {
 int syscall_read_dev(void *va, u_int dev, u_int size) {
   /* Exercise 5.2: Your code here. (2/2) */
   return msyscall(SYS_read_dev, va, dev, size);
+}
+
+int syscall_get_dir(char *path) {
+  return msyscall(SYS_get_dir, path);
+}
+
+int syscall_ch_dir(const char *path) {
+  return msyscall(SYS_ch_dir, path);
 }

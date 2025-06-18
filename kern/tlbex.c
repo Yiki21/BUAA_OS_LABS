@@ -19,6 +19,13 @@ static void passive_alloc(u_int va, Pde *pgdir, u_int asid) {
     struct Page *p = NULL;
 
     if (va < UTEMP) {
+        printk("passive_alloc: va = 0x%x, curenv = %p\n", va, curenv);
+        if (curenv) {
+            printk("curenv->env_id = 0x%x, curenv address = 0x%x\n", 
+                   curenv->env_id, (u_int)curenv);
+            printk("work_dir offset = 0x%x\n", 
+                   (u_int)&curenv->work_dir - (u_int)curenv);
+        }
         panic("address too low");
     }
 

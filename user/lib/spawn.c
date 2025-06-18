@@ -218,10 +218,10 @@ int spawn(char *prog, char **argv) {
 	return child;
 
 err2:
-	syscall_env_destroy(child);
+	syscall_env_destroy(-1, child);
 	return r;
 err1:
-	syscall_env_destroy(child);
+	syscall_env_destroy(-1, child);
 err:
 	close(fd);
 	return r;
@@ -231,4 +231,124 @@ int spawnl(char *prog, char *args, ...) {
 	// Thanks to MIPS calling convention, the layout of arguments on the stack
 	// are straightforward.
 	return spawn(prog, &args);
+}
+
+int spawn_abs(char *prog, char **argv) {
+		// Step 1: Open the file 'prog' (the path of the program).
+	// Return the error if 'open' fails.
+	int fd;
+	if ((fd = open_abs(prog, O_RDONLY)) < 0) {
+		return fd;
+	}
+
+	// Step 2: Read the ELF header (of type 'Elf32_Ehdr') from the file into 'elfbuf' using
+	// 'readn()'.
+	// If that fails (where 'readn' returns a different size than expected),
+	// set 'r' and 'goto err' to close the file and return the error.
+	int r;
+	u_char elfbuf[512];
+	/* Exercise 6.4: Your code here. (1/6) */
+	if ((r = readn(fd, elfbuf, sizeof(Elf32_Ehdr))) != sizeof(Elf32_Ehdr)) {
+		goto err;
+	}
+
+	const Elf32_Ehdr *ehdr = elf_from(elfbuf, sizeof(Elf32_Ehdr));
+	if (!ehdr) {
+		r = -E_NOT_EXEC;
+		goto err;
+	}
+	u_long entrypoint = ehdr->e_entry;
+
+	// Step 3: Create a child using 'syscall_exofork()' and store its envid in 'child'.
+	// If the syscall fails, set 'r' and 'goto err'.
+	u_int child;
+	/* Exercise 6.4: Your code here. (2/6) */
+	if ((r = syscall_exofork()) < 0) {
+		goto err;
+	}
+	child = r;
+
+	// Step 4: Use 'init_stack(child, argv, &sp)' to initialize the stack of the child.
+	// 'goto err1' if that fails.
+	u_int sp;
+	/* Exercise 6.4: Your code here. (3/6) */
+	if ((r = init_stack(child, argv, &sp)) < 0) {
+		goto err1;
+	}
+
+	// Step 5: Load the ELF segments in the file into the child's memory.
+	// This is similar to 'load_icode()' in the kernel.
+	size_t ph_off;
+	ELF_FOREACH_PHDR_OFF (ph_off, ehdr) {
+		// Read the program header in the file with offset 'ph_off' and length
+		// 'ehdr->e_phentsize' into 'elfbuf'.
+		// 'goto err1' on failure.
+		// You may want to use 'seek' and 'readn'.
+		/* Exercise 6.4: Your code here. (4/6) */
+		if ((r = seek(fd, ph_off)) < 0 ||
+		    (r = readn(fd, elfbuf, ehdr->e_phentsize)) != ehdr->e_phentsize) {
+			goto err1;
+		}
+
+		Elf32_Phdr *ph = (Elf32_Phdr *)elfbuf;
+		if (ph->p_type == PT_LOAD) {
+			void *bin;
+			// Read and map the ELF data in the file at 'ph->p_offset' into our memory
+			// using 'read_map()'.
+			// 'goto err1' if that fails.
+			/* Exercise 6.4: Your code here. (5/6) */
+			if ((r = read_map(fd, ph->p_offset, &bin)) < 0) {
+				goto err1;
+			}
+			// Load the segment 'ph' into the child's memory using 'elf_load_seg()'.
+			// Use 'spawn_mapper' as the callback, and '&child' as its data.
+			// 'goto err1' if that fails.
+			/* Exercise 6.4: Your code here. (6/6) */
+			if ((r = elf_load_seg(ph, bin, spawn_mapper, &child)) < 0) {
+				goto err1;
+			}
+		}
+	}
+	close(fd);
+
+	struct Trapframe tf = envs[ENVX(child)].env_tf;
+	tf.cp0_epc = entrypoint;
+	tf.regs[29] = sp;
+	if ((r = syscall_set_trapframe(child, &tf)) != 0) {
+		goto err2;
+	}
+
+	// Pages with 'PTE_LIBRARY' set are shared between the parent and the child.
+	for (u_int pdeno = 0; pdeno <= PDX(USTACKTOP); pdeno++) {
+		if (!(vpd[pdeno] & PTE_V)) {
+			continue;
+		}
+		for (u_int pteno = 0; pteno <= PTX(~0); pteno++) {
+			u_int pn = (pdeno << 10) + pteno;
+			u_int perm = vpt[pn] & ((1 << PGSHIFT) - 1);
+			if ((perm & PTE_V) && (perm & PTE_LIBRARY)) {
+				void *va = (void *)(pn << PGSHIFT);
+
+				if ((r = syscall_mem_map(0, va, child, va, perm)) < 0) {
+					debugf("spawn: syscall_mem_map %x %x: %d\n", va, child, r);
+					goto err2;
+				}
+			}
+		}
+	}
+
+	if ((r = syscall_set_env_status(child, ENV_RUNNABLE)) < 0) {
+		debugf("spawn: syscall_set_env_status %x: %d\n", child, r);
+		goto err2;
+	}
+	return child;
+
+err2:
+	syscall_env_destroy(-1, child);
+	return r;
+err1:
+	syscall_env_destroy(-1, child);
+err:
+	close(fd);
+	return r;
 }

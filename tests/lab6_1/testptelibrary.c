@@ -20,7 +20,7 @@ int main(int argc, char **argv) {
 	}
 	if (r == 0) {
 		strcpy(TMPVA, msg);
-		exit();
+		exit(0);
 	}
 
 	wait(r);
@@ -44,5 +44,5 @@ int main(int argc, char **argv) {
 
 void childofspawn(void) {
 	strcpy(TMPVA, msg2);
-	exit();
+	exit(0);
 }

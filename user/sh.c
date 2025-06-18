@@ -3,357 +3,96 @@
 
 #define WHITESPACE " \t\r\n"
 #define SYMBOLS "<|>&;()"
+#define MAX_CMDS 64
+#define MAX_ARGS 128
 
-/* Overview:
- *   Parse the next token from the string at s.
- *
- * Post-Condition:
- *   Set '*p1' to the beginning of the token and '*p2' to just past the token.
- *   Return:
- *     - 0 if the end of string is reached.
- *     - '<' for < (stdin redirection).
- *     - '>' for > (stdout redirection).
- *     - '|' for | (pipe).
- *     - 'w' for a word (command, argument, or file name).
- *
- *   The buffer is modified to turn the spaces after words into zero bytes
- * ('\0'), so that the returned token is a null-terminated string.
- */
-int _gettoken(char *s, char **p1, char **p2) {
-    *p1 = 0;
-    *p2 = 0;
-    if (s == 0) {
-        return 0;
-    }
+char buf[1024];
+char *argv[128];
 
-    while (strchr(WHITESPACE, *s)) {
-        *s++ = 0;
-    }
-    if (*s == 0) {
-        return 0;
-    }
-
-    if (strchr(SYMBOLS, *s)) {
-        int t = *s;
-        *p1 = s;
-        *s++ = 0;
-        *p2 = s;
-        return t;
-    }
-
-    *p1 = s;
-    while (*s && !strchr(WHITESPACE SYMBOLS, *s)) {
-        s++;
-    }
-    *p2 = s;
-    return 'w';
+void usage(void) {
+    printf("usage: sh [-ix] [script-file]\n");
+    exit(0);
 }
 
-int gettoken(char *s, char **p1) {
-    static int c, nc;
-    static char *np1, *np2;
+void read_line(char *buf, u_int n);
+void trim(char *s);
+int run_pipeline(char *cmds[], int index, int ncmds, int input_fd);
+int split_logical(char *line, char *segments[], char ops[], int *n);
+int run_single_command(char *line);
+int is_builtin(char *cmd);
+int run_builtin(char **args);
+int run_with_logic(char *line);
 
-    if (s) {
-        nc = _gettoken(s, &np1, &np2);
-        return 0;
+int sh_cd(int argc, char **args);
+int sh_pwd(int argc, char **args);
+int sh_exit(int argc, char **args) __attribute__((noreturn));
+
+char *builtin_str[] = {"cd", "exit", "pwd"};
+
+int (*builtin_func[])(int argc, char **) = {&sh_cd, &sh_exit, &sh_pwd};
+
+int main(int argc, char **argv) {
+    int r;
+    int interactive = iscons(0);
+    int echocmds = 0;
+    printf("\n:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::\n");
+    printf("::                                                         ::\n");
+    printf("::                     MOS Shell 2024                      ::\n");
+    printf("::                                                         ::\n");
+    printf(":::::::::::::::::::::::::::::::::::::::::::::::::::::::::\n");
+
+    ARGBEGIN {
+    case 'i':
+        interactive = 1;
+        break;
+    case 'x':
+        echocmds = 1;
+        break;
+    default:
+        usage();
     }
-    c = nc;
-    *p1 = np1;
-    nc = _gettoken(np2, &np1, &np2);
-    return c;
-}
+    ARGEND
 
-#define MAXPATHLEN 1024
-
-char cur_path[MAXPATHLEN] =
-    "/"; // Current working directory, initialized to root
-
-char *resolve_path(const char *origin_path) {
-    static char resolved_path[MAXPATHLEN];
-    char temp[MAXPATHLEN];
-
-    if (origin_path[0] == '/') {
-        // Absolute path, return as is
-        strcpy(resolved_path, origin_path);
-        return resolved_path;
+    if (argc > 1) {
+        usage();
     }
-
-    // Relative path, prepend current working directory
-    strcpy(temp, cur_path);
-    if (temp[strlen(temp) - 1] != '/') {
-        strcat(temp, "/");
-    }
-    strcat(temp, origin_path);
-    // Normalize the path
-
-    char *tokens[256];
-    int token_count = 0;
-    char *token = strtok(temp, "/");
-
-    while (token && token_count < 256) {
-        if (strcmp(token, ".") == 0) {
-            // 忽略当前目录符号，不做任何操作
-        } else if (strcmp(token, "..") == 0) {
-            if (token_count > 0) {
-                token_count--;
-            }
-        } else {
-            tokens[token_count++] = token;
+    if (argc == 1) {
+        close(0);
+        if ((r = open(argv[0], O_RDONLY)) < 0) {
+            user_panic("open %s: %d", argv[0], r);
         }
-        token = strtok(NULL, "/");
+        user_assert(r == 0);
     }
 
-    // Reconstruct the path
-    strcpy(resolved_path, "/");
-    for (int i = 0; i < token_count; i++) {
-        if (i > 0) {
-            strcat(resolved_path, "/");
-        }
-        strcat(resolved_path, tokens[i]);
-    }
-
-    return resolved_path;
-}
-
-int builtin_cd(char **argv) {
-    if (argv[1] == NULL) {
-        strcpy(cur_path, "/");
-        return 0;
-    } else if (argv[2] != NULL) {
-        printf("Too many args for cd command\n");
-        return 1;
-    } else {
-        char *new_path = resolve_path(argv[1]);
-        struct Stat st;
-        if (stat(new_path, &st) < 0) {
-            printf("cd: The directory '%s' does not exist\n", argv[1]);
-            return 1;
-        }
-        // Check if it's actually a directory
-        if (!st.st_isdir) {
-            printf("filePath: '%s' is not a directory\n", new_path);
-            printf("cd: '%s' is not a directory\n", argv[1]);
-            return 1;
-        }
-        strcpy(cur_path, new_path);
-        return 0;
-    }
-}
-
-int builtin_pwd(char **argv) {
-    // Count arguments (excluding command name)
-    int arg_count = 0;
-    while (argv[arg_count + 1] != NULL) {
-        arg_count++;
-    }
-
-    if (arg_count > 0) {
-        printf("pwd: expected 0 arguments; got %d\n", arg_count);
-        return 2;
-    }
-
-    printf("%s\n", cur_path);
-    return 0;
-}
-
-int builtin_exit(char **argv) {
-    int exit_code = 0;
-
-    if (argv[1] != NULL) {
-        // 简单的数字解析
-        char *str = argv[1];
-        int sign = 1;
-
-        if (*str == '-') {
-            sign = -1;
-            str++;
-        } else if (*str == '+') {
-            str++;
-        }
-
-        // 检查是否为有效数字
-        char *check = str;
-        if (*check == '\0') {
-            printf("exit: numeric argument required\n");
-            exit();
-        }
-
-        while (*check) {
-            if (*check < '0' || *check > '9') {
-                printf("exit: numeric argument required\n");
-                exit();
-            }
-            check++;
-        }
-
-        // 转换为数字
-        while (*str >= '0' && *str <= '9') {
-            exit_code = exit_code * 10 + (*str - '0');
-            str++;
-        }
-        exit_code *= sign;
-
-        if (argv[2] != NULL) {
-            printf("exit: too many arguments\n");
-            return 1;
-        }
-    }
-
-    exit();
-    return exit_code; // 这行不会执行到
-}
-
-static int last_exit_status = 0;
-
-int is_builtin_cmd(char *cmd) {
-    return (strcmp(cmd, "cd") == 0 || 
-            strcmp(cmd, "pwd") == 0 || 
-            strcmp(cmd, "exit") == 0);
-}
-
-int is_builtin(char **argv) {
-    if (strcmp(argv[0], "cd") == 0) {
-        last_exit_status = builtin_cd(argv);
-        return 1;
-    }
-    if (strcmp(argv[0], "pwd") == 0) {
-        last_exit_status = builtin_pwd(argv);
-        return 1;
-    }
-    if (strcmp(argv[0], "exit") == 0) {
-        last_exit_status = builtin_exit(argv);
-        return 1;
-    }
-    return 0;
-}
-
-#define MAXARGS 128
-
-int parsecmd(char **argv, int *rightpipe) {
-    int argc = 0;
     while (1) {
-        char *t;
-        int fd, r;
-        int c = gettoken(0, &t);
-        switch (c) {
-        case 0:
-            // 移除这里的路径解析，改为在runcmd中处理
-            return argc;
-        case 'w':
-            if (argc >= MAXARGS) {
-                debugf("too many arguments\n");
-                exit();
-            }
-            argv[argc++] = t;
-            break;
-        case '<':
-            if (gettoken(0, &t) != 'w') {
-                debugf("syntax error: < not followed by word\n");
-                exit();
-            }
-            // 对重定向文件名进行路径解析
-            t = resolve_path(t);
-            if ((fd = open(t, O_RDONLY)) < 0) {
-                debugf("open %s: %d\n", t, fd);
-                exit();
-            }
-            dup(fd, 0);
-            close(fd);
-            break;
-        case '>':
-            if (gettoken(0, &t) != 'w') {
-                debugf("syntax error: > not followed by word\n");
-                exit();
-            }
-            // 对重定向文件名进行路径解析
-            t = resolve_path(t);
-            if ((fd = open(t, O_WRONLY | O_CREAT | O_TRUNC)) < 0) {
-                debugf("open %s: %d\n", t, fd);
-                exit();
-            }
-            dup(fd, 1);
-            close(fd);
-            break;
-        case '|':;
-            int p[2];
-            if ((r = pipe(p)) < 0) {
-                debugf("pipe: %d\n", r);
-                exit();
-            }
-            *rightpipe = fork();
-            if (*rightpipe < 0) {
-                exit();
-            }
-            if (*rightpipe == 0) {
-                // Child process
-                dup(p[0], 0); // dup read end to fd 0
-                close(p[0]);  // close read end
-                close(p[1]);  // close write end
-                return parsecmd(argv, rightpipe);
-            } else {
-                // Parent process
-                dup(p[1], 1); // dup write end to fd 1
-                close(p[1]);  // close write end
-                close(p[0]);  // close read end
-                return argc;  // return argc to execute the left side of the
-                              // pipeline
-            }
-            break;
+        if (interactive) {
+            printf("\n$ ");
         }
+        read_line(buf, sizeof buf);
+        trim(buf);
+
+        if (buf[0] == '\0' || buf[0] == '#') {
+            continue; // 空行
+        }
+
+        if (echocmds) {
+            printf("Executing: %s\n", buf);
+        }
+
+        run_with_logic(buf);
     }
-    return argc;
+
+    return 0;
 }
 
-void runcmd(char **argv, int argc, int rightpipe) {
-    if (argc == 0) {
-        return;
-    }
-    
-    argv[argc] = 0;
-    
-    // 对非内置命令的参数进行路径解析
-    if (!is_builtin_cmd(argv[0])) {
-        // 特殊处理ls命令：如果没有参数，添加当前目录
-        if (strcmp(argv[0], "ls.b") == 0 && argc == 1) {
-            argv[1] = cur_path;
-            argc = 2;
-            argv[2] = 0;
-            //printf("ls: no arguments provided, using current directory '%s'\n", cur_path);
-        } else {
-            // 对其他命令的文件路径参数进行解析
-            for (int i = 1; i < argc; i++) {
-                if (argv[i][0] != '-') { // 不是选项参数
-                    argv[i] = resolve_path(argv[i]);
-                }
-            }
-        }
-    }
-    
-    int child = spawn(argv[0], argv);
-    close_all();
-    if (child >= 0) {
-        wait(child);
-    } else {
-        debugf("spawn %s: %d\n", argv[0], child);
-        last_exit_status = -1;
-    }
-    if (rightpipe) {
-        wait(rightpipe);
-    }
-    exit();
-}
-
-
-
-
-void readline(char *buf, u_int n) {
+void read_line(char *buf, u_int n) {
     int r;
     for (int i = 0; i < n; i++) {
         if ((r = read(0, buf + i, 1)) != 1) {
             if (r < 0) {
                 debugf("read error: %d\n", r);
             }
-            exit();
+            exit(-1);
         }
         if (buf[i] == '\b' || buf[i] == 0x7f) {
             if (i > 0) {
@@ -377,80 +116,292 @@ void readline(char *buf, u_int n) {
     buf[0] = 0;
 }
 
-char buf[1024];
+void trim(char *s) {
+    char *end;
 
-void usage(void) {
-    printf("usage: sh [-ix] [script-file]\n");
-    exit();
+    // 去除前导空格
+    while (*s && strchr(WHITESPACE, *s)) {
+        s++;
+    }
+
+    // 去除尾部空格
+    end = s + strlen(s) - 1;
+    while (end > s && strchr(WHITESPACE, *end)) {
+        end--;
+    }
+    *(end + 1) = '\0'; // 终止字符串
 }
 
-int main(int argc, char **argv) {
-    int r;
-    int interactive = iscons(0);
-    int echocmds = 0;
-    printf("\n:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::\n");
-    printf("::                                                         ::\n");
-    printf("::                     MOS Shell 2024                      ::\n");
-    printf("::                                                         ::\n");
-    printf(":::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::\n");
-    ARGBEGIN {
-    case 'i':
-        interactive = 1;
-        break;
-    case 'x':
-        echocmds = 1;
-        break;
-    default:
-        usage();
-    }
-    ARGEND
+int lsh_num_builtins(void) { return sizeof(builtin_str) / sizeof(char *); }
 
+int is_builtin(char *cmd) {
+    for (int i = 0; i < lsh_num_builtins(); i++) {
+        if (strcmp(cmd, builtin_str[i]) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int run_builtin(char **args) {
+    int builtin_index = is_builtin(args[0]);
+    if (builtin_index == -1) {
+        return -1; // 不是内置命令
+    }
+    // 计算参数个数
+    int argc = 0;
+    while (args[argc])
+        argc++;
+
+    return builtin_func[builtin_index](argc, args);
+}
+
+int chdir(const char *path) {
+    if (syscall_ch_dir(path) < 0) {
+        debugf("chdir %s failed\n", path);
+        return -1;
+    }
+    return 0;
+}
+
+int sh_cd(int argc, char **args) {
+    if (args[1] == NULL) {
+        chdir("/");
+        return 0;
+    }
+
+    if (argc > 2) {
+        printf("Too many args for cd command\n");
+        return 1;
+    }
+
+    char cur_path[MAXPATHLEN];
+    syscall_get_dir(cur_path);
+    char new_path[MAXPATHLEN];
+    resolve_path(args[1], cur_path, new_path, sizeof(new_path));
+
+    struct Stat s;
+    if (stat(new_path, &s) < 0) {
+        printf("cd: The directory '%s' does not exist.\n", new_path);
+        return 1;
+    }
+
+    if (!s.st_isdir) {
+        printf("cd: '%s' is not a directory.\n", new_path);
+        return 1;
+    }
+
+    chdir(new_path);
+    return 0;
+}
+
+int sh_pwd(int argc, char **args) {
     if (argc > 1) {
-        usage();
+        printf("pwd: expected 0 arguments; got %d\n", argc);
+        return 2;
     }
-    if (argc == 1) {
-        close(0);
-        if ((r = open(argv[0], O_RDONLY)) < 0) {
-            user_panic("open %s: %d", argv[0], r);
-        }
-        user_assert(r == 0);
+
+    char cur_path[MAXPATHLEN];
+    if (syscall_get_dir(cur_path) < 0) {
+        printf("pwd: failed to get current directory\n");
+        return 1;
     }
-    for (;;) {
-        if (interactive) {
-            printf("\n$ ");
-        }
-        readline(buf, sizeof buf);
 
-        if (buf[0] == '#') {
-            continue;
-        }
-        if (echocmds) {
-            printf("# %s\n", buf);
+    printf("%s\n", cur_path);
+    return 0;
+}
+
+__attribute__((noreturn)) int sh_exit(int argc, char **args)  {
+    if (argc > 1) {
+        printf("exit: expected 0 arguments; got %d\n", argc);
+        return 2;
+    }
+    close_all();
+    exit(0);
+}
+
+int run_with_logic(char *line) {
+    char *seg[MAX_CMDS];
+    char ops[MAX_CMDS];
+    int n = 0;
+
+    split_logical(line, seg, ops, &n);
+
+    for (int i = 0; i < n; i++) {
+        int status = run_single_command(seg[i]);
+
+        // 如果是 &&，上一条失败就停止
+        if (i < n - 1 && ops[i] == '&' && status != 0)
+            break;
+
+        // 如果是 ||，上一条成功就停止
+        if (i < n - 1 && ops[i] == '|' && status == 0)
+            break;
+    }
+}
+
+int split_logical(char *line, char *segments[], char ops[], int *n) {
+    *n = 0;
+    char *p = line;
+
+    while (*p) {
+        segments[*n] = p;
+        char *next = strstr(p, "&&");
+        char *alt = strstr(p, "||");
+        char *sep = NULL;
+        if (next && (!alt || next < alt)) {
+            ops[(*n)++] = '&';
+            sep = next;
+        } else if (alt) {
+            ops[(*n)++] = '|';
+            sep = alt;
         }
 
-        gettoken(buf, 0);
-        char *argv[MAXARGS];
-        int rightpipe = 0;
-        int argc = parsecmd(argv, &rightpipe);
-        if (argc > 0) {
-            argv[argc] = 0;
-            if (is_builtin(argv)) {
-                if (rightpipe) {
-                    wait(rightpipe);
-                }
-                continue;
+        if (sep) {
+            *sep = '\0'; // split string
+            p = sep + 2;
+        } else {
+            (*n)++;
+            break;
+        }
+    }
+    return *n;
+}
+
+int run_single_command(char *line) {
+    char *cmds[MAX_CMDS];
+    int ncmds = 0;
+
+    cmds[ncmds] = strtok(line, "|");
+    while (cmds[ncmds] && ncmds < MAX_CMDS - 1) {
+        cmds[++ncmds] = strtok(NULL, "|");
+    }
+
+    for (int i = 0; i < ncmds; ++i)
+        if (cmds[i])
+            while (*cmds[i] == ' ')
+                ++cmds[i];
+
+    return run_pipeline(cmds, 0, ncmds, 0);
+}
+
+void parse_args(char *line, char **args, char **infile, char **outfile) {
+    int i = 0, j = 0;
+    char *token = strtok(line, WHITESPACE);
+    while (token && j < MAX_ARGS - 1) {
+        if (strcmp(token, "<") == 0) {
+            token = strtok(NULL, WHITESPACE);
+            *infile = token;
+        } else if (strcmp(token, ">") == 0) {
+            token = strtok(NULL, WHITESPACE);
+            *outfile = token;
+        } else {
+            args[j++] = token;
+        }
+        token = strtok(NULL, WHITESPACE);
+    }
+    args[j] = NULL;
+}
+
+int run_pipeline(char *cmds[], int index, int ncmds, int input_fd) {
+    int pipefd[2];
+    char *args[MAX_ARGS];
+    char *infile = NULL, *outfile = NULL;
+
+    parse_args(cmds[index], args, &infile, &outfile);
+
+    if (index == 0 && infile) {
+        input_fd = open(infile, O_RDONLY);
+        if (input_fd < 0) {
+            printf("Error opening input file: %s\n", infile);
+            return -1;
+        }
+    }
+
+    // debugf("index: %d, ncmds: %d, input_fd: %d\n", index, ncmds, input_fd);
+
+    // 如果是最后一个命令
+    if (index == ncmds - 1) {
+        int out_fd = -1;
+        if (outfile) {
+            out_fd = open(outfile, O_WRONLY | O_CREAT | O_TRUNC);
+            if (out_fd < 0) {
+                printf("Error opening output file: %s\n", outfile);
+                return -1;
             }
         }
 
-        if ((r = fork()) < 0) {
-            user_panic("fork: %d", r);
+        if (is_builtin(args[0]) != -1) {
+            if (input_fd != 0) {
+                dup(input_fd, 0);
+                close(input_fd);
+            }
+            if (out_fd != -1) {
+                dup(out_fd, 1);
+                close(out_fd);
+            }
+            return run_builtin(args);
         }
-        if (r == 0) {
-            runcmd(argv, argc, rightpipe); // 传递已解析的参数
-            exit();
+
+        int child = fork();
+        if (child < 0) {
+            printf("Fork failed\n");
+            return -1;
+        } else if (child == 0) {
+            if (input_fd != 0) {
+                dup(input_fd, 0);
+                close(input_fd);
+            }
+            if (out_fd != -1) {
+                dup(out_fd, 1);
+                close(out_fd);
+            }
+            int cmd = spawn(args[0], args);
+            if (cmd < 0) {
+                printf("Command not found: %s\n", args[0]);
+                exit(1);
+            } else {
+                int ret = wait(cmd);
+                exit(ret);
+            }
         } else {
-            wait(r);
+            if (input_fd != 0) {
+                close(input_fd);
+            }
+            if (out_fd != -1) {
+                close(out_fd);
+            }
+            return wait(child);
         }
     }
-    return 0;
+
+    // 如果不是最后一个命令，需要创建管道
+    pipe(pipefd);
+    int child = fork();
+    if (child < 0) {
+        printf("Fork failed\n");
+        return -1;
+    } else if (child == 0) {
+        if (input_fd != 0) {
+            dup(input_fd, 0);
+            close(input_fd);
+        }
+        dup(pipefd[1], 1);
+        close(pipefd[0]);
+        close(pipefd[1]);
+        int cmd = spawn(args[0], args);
+        if (cmd < 0) {
+            printf("Command not found: %s\n", args[0]);
+            exit(1);
+        } else {
+            int ret = wait(cmd);
+            exit(ret);
+        }
+    } else {
+        close(pipefd[1]);
+        if (input_fd != 0) {
+            close(input_fd);
+        }
+        return run_pipeline(cmds, index + 1, ncmds, pipefd[0]);
+    }
 }

@@ -2,13 +2,13 @@
 #include <lib.h>
 #include <mmu.h>
 
-void exit(void) {
+void exit(int status) {
 	// After fs is ready (lab5), all our open files should be closed before dying.
 #if !defined(LAB) || LAB >= 5
 	close_all();
 #endif
 
-	syscall_env_destroy(0);
+	syscall_env_destroy(0, status);
 	user_panic("unreachable code");
 }
 
@@ -23,5 +23,5 @@ void libmain(int argc, char **argv) {
 	main(argc, argv);
 
 	// exit gracefully
-	exit();
+	exit(0);
 }

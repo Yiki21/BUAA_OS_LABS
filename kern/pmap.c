@@ -329,6 +329,9 @@ void page_remove(Pde *pgdir, u_int asid, u_long va) {
 }
 /* End of Key Code "page_remove" */
 
+
+
+
 void physical_memory_manage_check(void) {
     struct Page *pp, *pp0, *pp1, *pp2;
     struct Page_list fl;

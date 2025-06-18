@@ -39,6 +39,8 @@ struct Env {
 
 	// Lab 6 scheduler counts
 	u_int env_runs; // number of times we've been env_run'ed
+	char work_dir[128]; // working directory for this env
+	int ret_code; // return code for this env
 };
 
 LIST_HEAD(Env_list, Env);

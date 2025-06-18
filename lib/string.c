@@ -37,7 +37,7 @@ char *strncat(char *dest, const char *src, size_t n) {
     return dest;
 }
 
-char * strtok(char *str, const char *delim) {
+char *strtok(char *str, const char *delim) {
 	static char* next = NULL;
     if (str != NULL) {
         next = str;
@@ -70,6 +70,44 @@ char * strtok(char *str, const char *delim) {
         next = NULL;
     }
 
+    return start;
+}
+
+char *strtok_r(char *str, const char *delim, char **saveptr) {
+    char *start;
+    
+    if (str != NULL) {
+        *saveptr = str;
+    }
+    
+    if (*saveptr == NULL) {
+        return NULL;
+    }
+    
+    // 跳过前缀的分隔符
+    start = *saveptr;
+    while (*start && strchr(delim, *start)) {
+        start++;
+    }
+    
+    if (*start == '\0') {
+        *saveptr = NULL;
+        return NULL;
+    }
+    
+    // 找下一个分隔符
+    char *token_end = start;
+    while (*token_end && !strchr(delim, *token_end)) {
+        token_end++;
+    }
+    
+    if (*token_end) {
+        *token_end = '\0';
+        *saveptr = token_end + 1;
+    } else {
+        *saveptr = NULL;
+    }
+    
     return start;
 }
 
@@ -169,3 +207,124 @@ int strcmp(const char *p, const char *q) {
 	return 0;
 }
 
+
+/* Overview:
+ *   Resolve a relative or absolute path based on current working directory.
+ *
+ * Pre-Condition:
+ *   'origin_path' is the path to resolve.
+ *   'cur_path' is the current working directory.
+ *   'resolved_path' is the output buffer.
+ *   'max_len' is the size of the output buffer.
+ *
+ * Post-Condition:
+ *   Return 0 on success, resolved path is stored in 'resolved_path'.
+ *   Return -1 on error (invalid parameters, buffer too small, etc.).
+ */
+int resolve_path(const char *origin_path, const char *cur_path, char *resolved_path, size_t max_len) {
+    char temp[MAXPATHLEN];
+    char work_copy[MAXPATHLEN];
+    
+    // 检查参数
+    if (origin_path == NULL || resolved_path == NULL || max_len == 0) {
+        return -1;
+    }
+    
+    if (cur_path == NULL) {
+        cur_path = "/";
+    }
+
+    // 处理绝对路径
+    if (origin_path[0] == '/') {
+        if (strlen(origin_path) >= max_len) {
+            return -1;
+        }
+        strcpy(resolved_path, origin_path);
+        return 0;
+    }
+
+    // 处理相对路径
+    // 构建完整路径
+    if (strlen(cur_path) + strlen(origin_path) + 2 >= MAXPATHLEN) {
+        return -1;
+    }
+    
+    strcpy(temp, cur_path);
+    
+    // 确保当前路径以 / 结尾（除非是根目录）
+    size_t cur_len = strlen(temp);
+    if (cur_len > 1 && temp[cur_len - 1] != '/') {
+        strcat(temp, "/");
+    }
+    strcat(temp, origin_path);
+
+    // 复制到工作缓冲区进行规范化
+    strcpy(work_copy, temp);
+
+    // 规范化路径：处理 . 和 .. 
+    char *components[256];  // 路径组件数组
+    int component_count = 0;
+    
+    // 分割路径
+    char *token = strtok(work_copy, "/");
+    while (token != NULL && component_count < 256) {
+        if (strcmp(token, ".") == 0) {
+            // 当前目录，忽略
+        } else if (strcmp(token, "..") == 0) {
+            // 上级目录，删除一个组件
+            if (component_count > 0) {
+                component_count--;
+            }
+        } else if (strlen(token) > 0) {
+            // 普通目录名
+            components[component_count++] = token;
+        }
+        token = strtok(NULL, "/");
+    }
+
+    // 重新构建路径
+    resolved_path[0] = '\0';
+    strcat(resolved_path, "/");
+    
+    for (int i = 0; i < component_count; i++) {
+        if (strlen(resolved_path) + strlen(components[i]) + 2 >= max_len) {
+            return -1;  // 缓冲区太小
+        }
+        
+        if (i > 0) {
+            strcat(resolved_path, "/");
+        }
+        strcat(resolved_path, components[i]);
+    }
+
+    return 0;
+}
+
+char *strstr(const char *haystack, const char *needle) {
+    // 如果 needle 为空字符串，返回 haystack
+    if (*needle == '\0') {
+        return (char *)haystack;
+    }
+    
+    // 遍历 haystack 中的每个位置
+    while (*haystack) {
+        const char *h = haystack;
+        const char *n = needle;
+        
+        // 比较从当前位置开始的子串
+        while (*h && *n && *h == *n) {
+            h++;
+            n++;
+        }
+        
+        // 如果 needle 完全匹配，返回当前位置
+        if (*n == '\0') {
+            return (char *)haystack;
+        }
+        
+        haystack++;
+    }
+    
+    // 没有找到匹配的子串
+    return NULL;
+}

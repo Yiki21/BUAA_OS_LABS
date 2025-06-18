@@ -135,7 +135,6 @@ int dup(int oldfdnum, int newfdnum) {
 	if ((r = fd_lookup(oldfdnum, &oldfd)) < 0) {
 		return r;
 	}
-
 	/* Step 2: Close 'newfdnum' to reset content. */
 	close(newfdnum);
 	/* Step 3: Get 'newfd' reffered by 'newfdnum'. */
@@ -147,7 +146,7 @@ int dup(int oldfdnum, int newfdnum) {
 	if (vpd[PDX(ova)]) {
 		for (i = 0; i < PDMAP; i += PTMAP) {
 			pte = vpt[VPN(ova + i)];
-
+			
 			if (pte & PTE_V) {
 				// should be no error here -- pd is already allocated
 				if ((r = syscall_mem_map(0, (void *)(ova + i), 0, (void *)(nva + i),
@@ -158,12 +157,11 @@ int dup(int oldfdnum, int newfdnum) {
 		}
 	}
 
-
+	
 	if ((r = syscall_mem_map(0, oldfd, 0, newfd, vpt[VPN(oldfd)] & (PTE_D | PTE_LIBRARY))) <
-	    0) {
+	0) {
 		goto err;
 	}
-
 	
 
 	return newfdnum;
@@ -288,10 +286,12 @@ int stat(const char *path, struct Stat *stat) {
 	int fd, r;
 
 	if ((fd = open(path, O_RDONLY)) < 0) {
+		//debugf("stat: open %s failed: %d\n", path, fd);
 		return fd;
 	}
 
 	r = fstat(fd, stat);
 	close(fd);
+	//debugf("stat: fstat %s returned %d\n", path, r);
 	return r;
 }

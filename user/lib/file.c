@@ -19,6 +19,14 @@ struct Dev devfile = {
     .dev_stat = file_stat,
 };
 
+char *cur_dir(char *path) {
+    int result = syscall_get_dir(path);
+    if (result < 0) {
+        return NULL;
+    }
+    return path;
+}
+
 // Overview:
 //  Open a file (or directory).
 //
@@ -26,39 +34,68 @@ struct Dev devfile = {
 //  the file descriptor on success,
 //  the underlying error on failure.
 int open(const char *path, int mode) {
-	int r;
+    int r;
+    
+    // 检查路径参数
+    if (path == NULL) {
+        return -E_INVAL;
+    }
 
-	// Step 1: Alloc a new 'Fd' using 'fd_alloc' in fd.c.
-	// Hint: return the error code if failed.
-	struct Fd *fd;
-	/* Exercise 5.9: Your code here. (1/5) */
-	try (fd_alloc(&fd));
-	// Step 2: Prepare the 'fd' using 'fsipc_open' in fsipc.c.
-	/* Exercise 5.9: Your code here. (2/5) */
-	try (fsipc_open(path, mode, fd));
+    char p[MAXPATHLEN];
+    if (cur_dir(p) == NULL) {
+        strcpy(p, "/"); // 默认为根目录
+    }
+	char *resolved_path[MAXPATHLEN];
+    resolve_path(path, p, resolved_path, MAXPATHLEN);
 
-	// Step 3: Set 'va' to the address of the page where the 'fd''s data is cached, using
-	// 'fd2data'. Set 'size' and 'fileid' correctly with the value in 'fd' as a 'Filefd'.
-	char *va;
-	struct Filefd *ffd;
-	u_int size, fileid;
-	/* Exercise 5.9: Your code here. (3/5) */
-	va = fd2data(fd);
-	ffd = (struct Filefd *)fd;
-	fileid = ffd->f_fileid;
-	size = ffd->f_file.f_size;
+	//debugf("open: resolved path: %s\n", resolved_path);
+    
+    // 检查解析后的路径
+    if (resolved_path == NULL) {
+        return -E_INVAL;
+    }
 
-	// Step 4: Map the file content using 'fsipc_map'.
-	for (int i = 0; i < size; i += PTMAP) {
-		/* Exercise 5.9: Your code here. (4/5) */
-		if ((r = fsipc_map(fileid, i, va + i)) < 0) {
-			return r;
-		}
-	}
+    // Step 1: Alloc a new 'Fd' using 'fd_alloc' in fd.c.
+    struct Fd *fd;
+    try (fd_alloc(&fd));
 
-	// Step 5: Return the number of file descriptor using 'fd2num'.
-	/* Exercise 5.9: Your code here. (5/5) */
-	return fd2num(fd);
+	//debugf("open: allocated fd: %d\n", fd2num(fd));
+    
+    // Step 2: Prepare the 'fd' using 'fsipc_open' in fsipc.c.
+    try (fsipc_open(resolved_path, mode, fd));
+
+	//debugf("open: opened file %s with fd %d\n", resolved_path, fd2num(fd));
+
+    // Step 3: Set 'va' to the address of the page where the 'fd''s data is cached
+    char *va;
+    struct Filefd *ffd;
+    u_int size, fileid;
+    va = fd2data(fd);
+    ffd = (struct Filefd *)fd;
+    fileid = ffd->f_fileid;
+    size = ffd->f_file.f_size;
+
+    // Step 4: Map the file content using 'fsipc_map'.
+    for (int i = 0; i < size; i += PTMAP) {
+        if ((r = fsipc_map(fileid, i, va + i)) < 0) {
+            return r;
+        }
+    }
+
+    // Step 5: Return the number of file descriptor using 'fd2num'.
+	//debugf("open: file %s opened with fd %d\n", resolved_path, fd2num(fd));
+    return fd2num(fd);
+}
+
+int open_abs(const char *path, int mode) {
+	// Check if the path is absolute
+	char temp[MAXPATHLEN];
+	syscall_get_dir(temp);
+	syscall_ch_dir("/");
+	int r = open(path, mode);
+	// Call open with the absolute path
+	syscall_ch_dir(temp);
+	return r;
 }
 
 // Overview:
@@ -254,7 +291,10 @@ int remove(const char *path) {
 	// Call fsipc_remove.
 
 	/* Exercise 5.13: Your code here. */
-	return fsipc_remove(path);
+	char res_path[MAXPATHLEN];
+	char *cur_path = cur_dir(res_path);
+	resolve_path(path, cur_path, res_path, MAXPATHLEN);
+	return fsipc_remove(res_path);
 }
 
 // Overview:

@@ -73,11 +73,12 @@ void __attribute__((noreturn)) sys_yield(void) {
  *  Returns 0 on success.
  *  Returns the original error if underlying calls fail.
  */
-int sys_env_destroy(u_int envid) {
+int sys_env_destroy(u_int envid, int status) {
   struct Env *e;
+  e->ret_code = status;
   try(envid2env(envid, &e, 1));
 
-  printk("[%08x] destroying %08x\n", curenv->env_id, e->env_id);
+  //printk("[%08x] destroying %08x\n", curenv->env_id, e->env_id);
   env_destroy(e);
   return 0;
 }
@@ -279,6 +280,7 @@ int sys_exofork(void) {
   /* Exercise 4.9: Your code here. (4/4) */
   e->env_status = ENV_NOT_RUNNABLE;
   e->env_pri = curenv->env_pri;
+  
 
   return e->env_id;
 }
@@ -581,6 +583,186 @@ int sys_read_dev(u_int va, u_int pa, u_int len) {
   return 0;
 }
 
+/* Overview:
+ *   Safely copy data from kernel space to user space.
+ *   This function checks page permissions and handles TLB exceptions properly.
+ *
+ * Pre-Condition:
+ *   'dst' is a user virtual address, 'src' is a kernel address.
+ *   'len' is the number of bytes to copy.
+ *
+ * Post-Condition:
+ *   Return 0 on success.
+ *   Return -E_INVAL if user address is invalid.
+ *   Return -E_FAULT if copy fails due to permission issues.
+ */
+static int safe_copy_to_user(void *dst, const void *src, size_t len) {
+    u_long dst_va = (u_long)dst;
+    u_long src_va = (u_long)src;
+    
+    // 检查目标地址是否在用户空间
+    if (is_illegal_va_range(dst_va, len)) {
+        return -E_INVAL;
+    }
+    
+    // 检查源地址是否在内核空间
+    if (src_va < ULIM) {
+        return -E_INVAL;
+    }
+    
+    if (curenv == NULL) {
+        return -E_BAD_ENV;
+    }
+    
+    // 逐页拷贝，确保每页都有写权限
+    size_t copied = 0;
+    while (copied < len) {
+        u_long page_start = (dst_va + copied) & ~(PAGE_SIZE - 1);
+        u_long page_offset = (dst_va + copied) - page_start;
+        size_t page_remain = PAGE_SIZE - page_offset;
+        size_t to_copy = (len - copied < page_remain) ? (len - copied) : page_remain;
+        
+        // 检查页面是否映射且可写
+        Pte *pte;
+        struct Page *pp = page_lookup(curenv->env_pgdir, page_start, &pte);
+        if (pp == NULL || !(*pte & PTE_V)) {
+            return -E_INVAL;
+        }
+        
+        // 如果页面没有写权限，临时添加写权限
+        int need_restore_perm = 0;
+        if (!(*pte & PTE_D)) {
+            *pte |= PTE_D;
+            need_restore_perm = 1;
+            tlb_invalidate(curenv->env_asid, page_start);
+        }
+        
+        // 执行实际拷贝
+        memcpy((void *)(dst_va + copied), (void *)(src_va + copied), to_copy);
+        
+        // 恢复原来的权限
+        if (need_restore_perm) {
+            *pte &= ~PTE_D;
+            tlb_invalidate(curenv->env_asid, page_start);
+        }
+        
+        copied += to_copy;
+    }
+    
+    return 0;
+}
+
+/* Overview:
+ *   Safely copy data from user space to kernel space.
+ *
+ * Pre-Condition:
+ *   'dst' is a kernel address, 'src' is a user virtual address.
+ *   'len' is the number of bytes to copy.
+ *
+ * Post-Condition:
+ *   Return 0 on success.
+ *   Return -E_INVAL if user address is invalid.
+ *   Return -E_FAULT if copy fails due to permission issues.
+ */
+static int safe_copy_from_user(void *dst, const void *src, size_t len) {
+    u_long src_va = (u_long)src;
+    u_long dst_va = (u_long)dst;
+    
+    // 检查源地址是否在用户空间
+    if (is_illegal_va_range(src_va, len)) {
+        return -E_INVAL;
+    }
+    
+    // 检查目标地址是否在内核空间
+    if (dst_va < ULIM) {
+        return -E_INVAL;
+    }
+    
+    if (curenv == NULL) {
+        return -E_BAD_ENV;
+    }
+    
+    // 逐页拷贝，确保每页都可读
+    size_t copied = 0;
+    while (copied < len) {
+        u_long page_start = (src_va + copied) & ~(PAGE_SIZE - 1);
+        u_long page_offset = (src_va + copied) - page_start;
+        size_t page_remain = PAGE_SIZE - page_offset;
+        size_t to_copy = (len - copied < page_remain) ? (len - copied) : page_remain;
+        
+        // 检查页面是否映射且可读
+        struct Page *pp = page_lookup(curenv->env_pgdir, page_start, NULL);
+        if (pp == NULL) {
+            return -E_INVAL;
+        }
+        
+        // 执行实际拷贝
+        memcpy((void *)(dst_va + copied), (void *)(src_va + copied), to_copy);
+        
+        copied += to_copy;
+    }
+    
+    return 0;
+}
+
+int sys_get_dir(char *path) {
+    // 检查参数有效性
+    if (path == NULL) {
+        return -E_INVAL;
+    }
+    
+    // 检查地址范围，确保在用户空间
+    if (is_illegal_va_range((u_long)path, MAXPATHLEN)) {
+        return -E_INVAL;
+    }
+    
+    if (curenv == NULL) {
+        return -E_BAD_ENV;
+    }
+    
+    // 确保 curenv->work_dir 初始化
+    if (curenv->work_dir[0] == '\0') {
+        strcpy(curenv->work_dir, "/");
+    }
+    
+    // 安全地复制工作目录到用户空间
+    int len = strlen(curenv->work_dir);
+    if (len >= MAXPATHLEN) {
+        len = MAXPATHLEN - 1;
+    }
+
+    strcpy(path, curenv->work_dir);
+    return 0;
+}
+
+int sys_ch_dir(const char *path) {
+    // char temp_path[MAXPATHLEN];
+    
+    // 检查参数有效性
+    if (path == NULL) {
+        return -E_INVAL;
+    }
+    
+    // 检查地址范围
+    if (is_illegal_va_range((u_long)path, MAXPATHLEN)) {
+        return -E_INVAL;
+    }
+    
+    if (curenv == NULL) {
+        return -E_BAD_ENV;
+    }
+    
+    int len = strlen(path);
+    if (len >= sizeof(curenv->work_dir)) {
+        return -E_INVAL;
+    }
+    
+    // 设置工作目录
+    strcpy(curenv->work_dir, path);
+    
+    return 0;
+}
+
 void *syscall_table[MAX_SYSNO] = {
     [SYS_putchar] = sys_putchar,
     [SYS_print_cons] = sys_print_cons,
@@ -600,6 +782,8 @@ void *syscall_table[MAX_SYSNO] = {
     [SYS_cgetc] = sys_cgetc,
     [SYS_write_dev] = sys_write_dev,
     [SYS_read_dev] = sys_read_dev,
+    [SYS_get_dir] = sys_get_dir,
+    [SYS_ch_dir] = sys_ch_dir,
 };
 
 /* Overview:
