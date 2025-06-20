@@ -72,6 +72,7 @@ void usage(void) {
 
 int main(int argc, char **argv) {
     int i;
+    //debugf("ls: argc %d\n", argc);
     
     ARGBEGIN {
         default:
@@ -97,6 +98,7 @@ int main(int argc, char **argv) {
         }
     }
     printf("\n");
+    //debugf("ls: done with %d\n", r);
     exit(0);
     return r;
 }

@@ -57,6 +57,7 @@ int init_stack(u_int child, char **argv, u_int *init_sp) {
 	// Set args[argc] to 0 to null-terminate the args array.
 	ctemp--;
 	args[argc] = (u_int)ctemp;
+	//args[argc] = 0;
 
 	// Push two more words onto the child's stack below 'args',
 	// containing the argc and argv parameters to be passed
@@ -107,9 +108,10 @@ static int spawn_mapper(void *data, u_long va, size_t offset, u_int perm, const 
  *   coherence, which MOS has NOT implemented. This may result in unexpected behaviours on real
  *   CPUs! QEMU doesn't simulate caching, allowing the OS to function correctly.
  */
-int spawn(char *prog, char **argv) {
+volatile int spawn(char *prog, char **argv) {
 	// Step 1: Open the file 'prog' (the path of the program).
 	// Return the error if 'open' fails.
+	debugf("", prog);
 	int fd;
 	if ((fd = open(prog, O_RDONLY)) < 0) {
 		return fd;
@@ -121,6 +123,7 @@ int spawn(char *prog, char **argv) {
 	// set 'r' and 'goto err' to close the file and return the error.
 	int r;
 	u_char elfbuf[512];
+	//debugf("spawn: read %s\n", prog);
 	/* Exercise 6.4: Your code here. (1/6) */
 	if ((r = readn(fd, elfbuf, sizeof(Elf32_Ehdr))) != sizeof(Elf32_Ehdr)) {
 		goto err;
@@ -224,6 +227,7 @@ err1:
 	syscall_env_destroy(-1, child);
 err:
 	close(fd);
+	//debugf("spawn: open %s: %d\n", prog, r);
 	return r;
 }
 

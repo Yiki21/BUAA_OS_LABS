@@ -292,7 +292,7 @@ int sys_exofork(void) {
     e->env_status = ENV_NOT_RUNNABLE;
     e->env_pri = curenv->env_pri;
 
-    for (int i = 0; i < 16; i++) {
+    for (int i = 0; i < curenv->args_count; i++) {
         if (curenv->env_args[i].exported) {
             strcpy(e->env_args[i].name, curenv->env_args[i].name);
             strcpy(e->env_args[i].value, curenv->env_args[i].value);

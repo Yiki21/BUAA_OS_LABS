@@ -573,6 +573,8 @@ int run_with_logic(char *line) {
     split_logical(line, seg, ops, &n);
 
     for (int i = 0; i < n; i++) {
+        // debugf("Running command %d: %s\n", i, seg[i]);
+
         int status = run_single_command(seg[i]);
 
         // debugf("Command %d returned status: %d\n", i, status);
@@ -652,24 +654,20 @@ void parse_args(char *line, char **args, char **infile, char **outfile) {
 }
 
 int run_pipeline(char *cmds[], int index, int ncmds, int input_fd) {
-    int pipefd[2];
-    char *args[MAX_ARGS];
-    char *infile = NULL, *outfile = NULL;
+    if (ncmds == 1) {
+        // 只有一个命令，直接执行
+        char *args[MAX_ARGS];
+        char *infile = NULL, *outfile = NULL;
+        parse_args(cmds[0], args, &infile, &outfile);
 
-    parse_args(cmds[index], args, &infile, &outfile);
-
-    if (index == 0 && infile) {
-        input_fd = open(infile, O_RDONLY);
-        if (input_fd < 0) {
-            printf("Error opening input file: %s\n", infile);
-            return -1;
+        if (infile) {
+            input_fd = open(infile, O_RDONLY);
+            if (input_fd < 0) {
+                printf("Error opening input file: %s\n", infile);
+                return -1;
+            }
         }
-    }
 
-    // debugf("index: %d, ncmds: %d, input_fd: %d\n", index, ncmds, input_fd);
-
-    // 如果是最后一个命令
-    if (index == ncmds - 1) {
         int out_fd = -1;
         if (outfile) {
             out_fd = open(outfile, O_WRONLY | O_CREAT | O_TRUNC);
@@ -688,9 +686,10 @@ int run_pipeline(char *cmds[], int index, int ncmds, int input_fd) {
                 dup(out_fd, 1);
                 close(out_fd);
             }
-            // debugf("Running builtin command: %s\n", args[0]);
             return run_builtin(args);
         }
+
+        //debugf("Running command: %s\n", args[0]);
 
         int child = fork();
         if (child < 0) {
@@ -705,54 +704,123 @@ int run_pipeline(char *cmds[], int index, int ncmds, int input_fd) {
                 dup(out_fd, 1);
                 close(out_fd);
             }
+            //debugf("Executing command: %s\n", args[0]);
             int cmd = try_spawn_command(args[0], args);
+            //debugf("Command %s returned %d\n", args[0], cmd);
             if (cmd < 0) {
                 printf("Command not found: %s\n", args[0]);
                 exit(1);
             } else {
                 int ret = wait(cmd);
+                //debugf("Command %s exited with status %d\n", args[0], ret);
                 exit(ret);
             }
         } else {
-            if (input_fd != 0) {
+            if (input_fd != 0)
                 close(input_fd);
-            }
-            if (out_fd != -1) {
+            if (out_fd != -1)
                 close(out_fd);
-            }
             return wait(child);
         }
     }
 
-    // 如果不是最后一个命令，需要创建管道
-    pipe(pipefd);
-    int child = fork();
-    if (child < 0) {
-        printf("Fork failed\n");
-        return -1;
-    } else if (child == 0) {
-        if (input_fd != 0) {
-            dup(input_fd, 0);
-            close(input_fd);
+    // 多个命令的管道：同时启动所有进程
+    int pipes[MAX_CMDS - 1][2]; // 创建所有需要的管道
+    int children[MAX_CMDS];     // 存储所有子进程PID
+
+    // 创建所有管道
+    for (int i = 0; i < ncmds - 1; i++) {
+        if (pipe(pipes[i]) < 0) {
+            printf("Pipe creation failed\n");
+            return -1;
         }
-        dup(pipefd[1], 1);
-        close(pipefd[0]);
-        close(pipefd[1]);
-        int cmd = try_spawn_command(args[0], args);
-        if (cmd < 0) {
-            printf("Command not found: %s\n", args[0]);
-            exit(1);
-        } else {
-            int ret = wait(cmd);
-            exit(ret);
-        }
-    } else {
-        close(pipefd[1]);
-        if (input_fd != 0) {
-            close(input_fd);
-        }
-        return run_pipeline(cmds, index + 1, ncmds, pipefd[0]);
     }
+
+    // 启动所有子进程
+    for (int i = 0; i < ncmds; i++) {
+        char *args[MAX_ARGS];
+        char *infile = NULL, *outfile = NULL;
+        parse_args(cmds[i], args, &infile, &outfile);
+
+        children[i] = fork();
+        if (children[i] < 0) {
+            printf("Fork failed\n");
+            return -1;
+        } else if (children[i] == 0) {
+            // 子进程：设置输入输出重定向
+
+            // 设置输入
+            if (i == 0) {
+                // 第一个命令
+                if (infile) {
+                    int fd = open(infile, O_RDONLY);
+                    if (fd >= 0) {
+                        dup(fd, 0);
+                        close(fd);
+                    }
+                } else if (input_fd != 0) {
+                    dup(input_fd, 0);
+                    close(input_fd);
+                }
+            } else {
+                // 中间命令：从前一个管道读取
+                dup(pipes[i - 1][0], 0);
+            }
+
+            // 设置输出
+            if (i == ncmds - 1) {
+                // 最后一个命令
+                if (outfile) {
+                    int fd = open(outfile, O_WRONLY | O_CREAT | O_TRUNC);
+                    if (fd >= 0) {
+                        dup(fd, 1);
+                        close(fd);
+                    }
+                }
+            } else {
+                // 非最后一个命令：写入到下一个管道
+                dup(pipes[i][1], 1);
+            }
+
+            // 关闭所有管道描述符
+            for (int j = 0; j < ncmds - 1; j++) {
+                close(pipes[j][0]);
+                close(pipes[j][1]);
+            }
+
+            // 执行命令
+            if (is_builtin(args[0]) != -1) {
+                run_builtin(args);
+                exit(0);
+            } else {
+                int cmd = try_spawn_command(args[0], args);
+                if (cmd < 0) {
+                    printf("Command not found: %s\n", args[0]);
+                    exit(1);
+                } else {
+                    int ret = wait(cmd);
+                    exit(ret);
+                }
+            }
+        }
+    }
+
+    // 父进程：关闭所有管道描述符
+    for (int i = 0; i < ncmds - 1; i++) {
+        close(pipes[i][0]);
+        close(pipes[i][1]);
+    }
+    if (input_fd != 0) {
+        close(input_fd);
+    }
+
+    // 等待所有子进程完成
+    int last_status = 0;
+    for (int i = 0; i < ncmds; i++) {
+        last_status = wait(children[i]);
+    }
+
+    return last_status;
 }
 
 void expand_vars(char *line) {
@@ -815,7 +883,9 @@ int try_spawn_command(char *cmd, char **args) {
     char cmd_with_b[256];
 
     // 首先尝试不带.b后缀的命令
+    // debugf("Trying to spawn command: %s\n", cmd);
     result = spawn(cmd, args);
+    //debugf("Spawn result for %s: %d\n", cmd, result);
     if (result >= 0) {
         return result;
     }
@@ -827,6 +897,7 @@ int try_spawn_command(char *cmd, char **args) {
 
         // 更新args[0]为带.b后缀的版本
         args[0] = cmd_with_b;
+        //debugf("Trying to spawn command with .b: %s\n", cmd_with_b);
         result = spawn(cmd_with_b, args);
         if (result >= 0) {
             return result;
