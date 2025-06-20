@@ -85,20 +85,26 @@ int main(int argc, char **argv) {
     }
     ARGEND
     
-    int r;
+    int r = 0;
+    int overall_status = 0;  // 记录整体状态
+    
     if (argc == 0) {
         char cur_path[MAXPATHLEN];
         if (syscall_get_dir(cur_path) < 0) {
             strcpy(cur_path, "/");
         }
         r = ls(cur_path, "");
+        overall_status = r;
     } else {
         for (i = 0; i < argc; i++) {
             r = ls(argv[i], argv[i]);
+            if (r != 0) {
+                overall_status = r;  // 记录任何错误
+            }
         }
     }
     printf("\n");
-    //debugf("ls: done with %d\n", r);
-    exit(0);
-    return r;
+    //debugf("ls: done with %d\n", overall_status);
+    exit(overall_status);  // 使用正确的退出状态
+    return overall_status;
 }

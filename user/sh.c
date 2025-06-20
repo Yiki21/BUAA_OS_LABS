@@ -85,11 +85,11 @@ int main(int argc, char **argv) {
     }
     ARGEND
 
-    
     history_fd = open("/.mos_history", O_RDWR | O_CREAT);
-    //debugf("sh: history_fd = %d\n", history_fd);
+    // debugf("sh: history_fd = %d\n", history_fd);
     load_history(); // 启动时加载历史记录
-    //debugf("sh: argc %d, interactive %d, echocmds %d\n", argc, interactive, echocmds);
+    // debugf("sh: argc %d, interactive %d, echocmds %d\n", argc, interactive,
+    // echocmds);
 
     if (argc > 1) {
         usage();
@@ -307,38 +307,39 @@ void load_history(void) {
     // 重置文件指针到开头
     seek(history_fd, 0);
 
-    char buffer[4096];  // 一次读取更多数据
+    char buffer[4096]; // 一次读取更多数据
     int bytes_read = read(history_fd, buffer, sizeof(buffer) - 1);
-    
+
     if (bytes_read <= 0) {
-        return;  // 文件为空或读取失败
+        return; // 文件为空或读取失败
     }
-    
-    buffer[bytes_read] = '\0';  // 确保字符串结束
-    
+
+    buffer[bytes_read] = '\0'; // 确保字符串结束
+
     history_count = 0;
     char *line_start = buffer;
     char *line_end;
-    
+
     while (history_count < HISTFILESIZE && line_start < buffer + bytes_read) {
         // 查找换行符
         line_end = strchr(line_start, '\n');
-        
+
         if (line_end) {
-            *line_end = '\0';  // 替换换行符为字符串结束符
+            *line_end = '\0'; // 替换换行符为字符串结束符
         } else {
             // 最后一行没有换行符
             line_end = buffer + bytes_read;
         }
-        
+
         // 如果行不为空，添加到历史记录
         if (strlen(line_start) > 0) {
-            strncpy(history_lines[history_count], line_start, 
-                   sizeof(history_lines[history_count]) - 1);
-            history_lines[history_count][sizeof(history_lines[history_count]) - 1] = '\0';
+            strncpy(history_lines[history_count], line_start,
+                    sizeof(history_lines[history_count]) - 1);
+            history_lines[history_count]
+                         [sizeof(history_lines[history_count]) - 1] = '\0';
             history_count++;
         }
-        
+
         // 移动到下一行
         if (line_end < buffer + bytes_read) {
             line_start = line_end + 1;
@@ -584,25 +585,28 @@ int run_with_logic(char *line) {
     char *seg[MAX_CMDS];
     char ops[MAX_CMDS];
     int n = 0;
+    int last_status = 0;
 
     split_logical(line, seg, ops, &n);
 
     for (int i = 0; i < n; i++) {
         // debugf("Running command %d: %s\n", i, seg[i]);
 
-        int status = run_single_command(seg[i]);
+        last_status = run_single_command(seg[i]);
 
-        // debugf("Command %d returned status: %d\n", i, status);
+        // debugf("Command %d returned status: %d\n", i, last_status);
 
         // 如果是 &&，上一条失败就停止
-        if (i < n - 1 && ops[i] == '&' && status != 0)
+        if (i < n - 1 && ops[i] == '&' && last_status != 0) {
             break;
+        }
 
         // 如果是 ||，上一条成功就停止
-        if (i < n - 1 && ops[i] == '|' && status == 0)
+        if (i < n - 1 && ops[i] == '|' && last_status == 0) {
             break;
+        }
     }
-    return 0;
+    return last_status; // 返回最后执行命令的状态
 }
 
 int split_logical(char *line, char *segments[], char ops[], int *n) {
@@ -650,16 +654,24 @@ int run_single_command(char *line) {
     return run_pipeline(cmds, 0, ncmds, 0);
 }
 
-void parse_args(char *line, char **args, char **infile, char **outfile) {
+void parse_args(char *line, char **args, char **infile, char **outfile,
+                int *append_mode) {
     int i = 0, j = 0;
     char *token = strtok(line, WHITESPACE);
+    *append_mode = 0; // 默认不是追加模式
+
     while (token && j < MAX_ARGS - 1) {
         if (strcmp(token, "<") == 0) {
             token = strtok(NULL, WHITESPACE);
             *infile = token;
+        } else if (strcmp(token, ">>") == 0) {
+            token = strtok(NULL, WHITESPACE);
+            *outfile = token;
+            *append_mode = 1; // 设置追加模式
         } else if (strcmp(token, ">") == 0) {
             token = strtok(NULL, WHITESPACE);
             *outfile = token;
+            *append_mode = 0; // 确保是覆盖模式
         } else {
             args[j++] = token;
         }
@@ -673,7 +685,8 @@ int run_pipeline(char *cmds[], int index, int ncmds, int input_fd) {
         // 只有一个命令，直接执行
         char *args[MAX_ARGS];
         char *infile = NULL, *outfile = NULL;
-        parse_args(cmds[0], args, &infile, &outfile);
+        int append_mode = 0;
+        parse_args(cmds[0], args, &infile, &outfile, &append_mode);
 
         if (infile) {
             input_fd = open(infile, O_RDONLY);
@@ -685,7 +698,21 @@ int run_pipeline(char *cmds[], int index, int ncmds, int input_fd) {
 
         int out_fd = -1;
         if (outfile) {
-            out_fd = open(outfile, O_WRONLY | O_CREAT | O_TRUNC);
+            if (append_mode) {
+                // 追加模式：打开文件用于追加，如果不存在则创建
+                out_fd = open(outfile, O_WRONLY | O_CREAT);
+                if (out_fd >= 0) {
+                    // 移动到文件末尾
+                    struct Stat stat;
+                    if (fstat(out_fd, &stat) >= 0) {
+                        seek(out_fd, stat.st_size);
+                    }
+                }
+            } else {
+                // 覆盖模式：截断文件
+                out_fd = open(outfile, O_WRONLY | O_CREAT | O_TRUNC);
+            }
+
             if (out_fd < 0) {
                 printf("Error opening output file: %s\n", outfile);
                 return -1;
@@ -755,7 +782,8 @@ int run_pipeline(char *cmds[], int index, int ncmds, int input_fd) {
     for (int i = 0; i < ncmds; i++) {
         char *args[MAX_ARGS];
         char *infile = NULL, *outfile = NULL;
-        parse_args(cmds[i], args, &infile, &outfile);
+        int append_mode = 0;
+        parse_args(cmds[i], args, &infile, &outfile, &append_mode);
 
         children[i] = fork();
         if (children[i] < 0) {
@@ -786,7 +814,21 @@ int run_pipeline(char *cmds[], int index, int ncmds, int input_fd) {
             if (i == ncmds - 1) {
                 // 最后一个命令
                 if (outfile) {
-                    int fd = open(outfile, O_WRONLY | O_CREAT | O_TRUNC);
+                    int fd;
+                    if (append_mode) {
+                        // 追加模式
+                        fd = open(outfile, O_WRONLY | O_CREAT);
+                        if (fd >= 0) {
+                            struct Stat stat;
+                            if (fstat(fd, &stat) >= 0) {
+                                seek(fd, stat.st_size);
+                            }
+                        }
+                    } else {
+                        // 覆盖模式
+                        fd = open(outfile, O_WRONLY | O_CREAT | O_TRUNC);
+                    }
+
                     if (fd >= 0) {
                         dup(fd, 1);
                         close(fd);
