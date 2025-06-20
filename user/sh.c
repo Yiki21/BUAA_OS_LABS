@@ -85,14 +85,18 @@ int main(int argc, char **argv) {
     }
     ARGEND
 
+    
     history_fd = open("/.mos_history", O_RDWR | O_CREAT);
+    //debugf("sh: history_fd = %d\n", history_fd);
     load_history(); // 启动时加载历史记录
+    //debugf("sh: argc %d, interactive %d, echocmds %d\n", argc, interactive, echocmds);
 
     if (argc > 1) {
         usage();
     }
     if (argc == 1) {
         close(0);
+        // debugf("sh: opening script file %s\n", argv[0]);
         if ((r = open(argv[0], O_RDONLY)) < 0) {
             user_panic("open %s: %d", argv[0], r);
         }
@@ -303,32 +307,43 @@ void load_history(void) {
     // 重置文件指针到开头
     seek(history_fd, 0);
 
-    char line[1024];
-    int pos = 0;
-    char c;
-
+    char buffer[4096];  // 一次读取更多数据
+    int bytes_read = read(history_fd, buffer, sizeof(buffer) - 1);
+    
+    if (bytes_read <= 0) {
+        return;  // 文件为空或读取失败
+    }
+    
+    buffer[bytes_read] = '\0';  // 确保字符串结束
+    
     history_count = 0;
-
-    while (history_count < HISTFILESIZE) {
-        pos = 0;
-        // 读取一行
-        while (read(history_fd, &c, 1) == 1) {
-            if (c == '\n') {
-                break;
-            }
-            if (pos < sizeof(line) - 1) {
-                line[pos++] = c;
-            }
+    char *line_start = buffer;
+    char *line_end;
+    
+    while (history_count < HISTFILESIZE && line_start < buffer + bytes_read) {
+        // 查找换行符
+        line_end = strchr(line_start, '\n');
+        
+        if (line_end) {
+            *line_end = '\0';  // 替换换行符为字符串结束符
+        } else {
+            // 最后一行没有换行符
+            line_end = buffer + bytes_read;
         }
-
-        if (pos == 0 && c != '\n') {
-            break; // 文件结束
-        }
-
-        line[pos] = '\0';
-        if (pos > 0) {
-            strcpy(history_lines[history_count], line);
+        
+        // 如果行不为空，添加到历史记录
+        if (strlen(line_start) > 0) {
+            strncpy(history_lines[history_count], line_start, 
+                   sizeof(history_lines[history_count]) - 1);
+            history_lines[history_count][sizeof(history_lines[history_count]) - 1] = '\0';
             history_count++;
+        }
+        
+        // 移动到下一行
+        if (line_end < buffer + bytes_read) {
+            line_start = line_end + 1;
+        } else {
+            break;
         }
     }
 }
@@ -689,7 +704,7 @@ int run_pipeline(char *cmds[], int index, int ncmds, int input_fd) {
             return run_builtin(args);
         }
 
-        //debugf("Running command: %s\n", args[0]);
+        // debugf("Running command: %s\n", args[0]);
 
         int child = fork();
         if (child < 0) {
@@ -704,15 +719,15 @@ int run_pipeline(char *cmds[], int index, int ncmds, int input_fd) {
                 dup(out_fd, 1);
                 close(out_fd);
             }
-            //debugf("Executing command: %s\n", args[0]);
+            // debugf("Executing command: %s\n", args[0]);
             int cmd = try_spawn_command(args[0], args);
-            //debugf("Command %s returned %d\n", args[0], cmd);
+            // debugf("Command %s returned %d\n", args[0], cmd);
             if (cmd < 0) {
                 printf("Command not found: %s\n", args[0]);
                 exit(1);
             } else {
                 int ret = wait(cmd);
-                //debugf("Command %s exited with status %d\n", args[0], ret);
+                // debugf("Command %s exited with status %d\n", args[0], ret);
                 exit(ret);
             }
         } else {
@@ -885,7 +900,7 @@ int try_spawn_command(char *cmd, char **args) {
     // 首先尝试不带.b后缀的命令
     // debugf("Trying to spawn command: %s\n", cmd);
     result = spawn(cmd, args);
-    //debugf("Spawn result for %s: %d\n", cmd, result);
+    // debugf("Spawn result for %s: %d\n", cmd, result);
     if (result >= 0) {
         return result;
     }
@@ -897,7 +912,7 @@ int try_spawn_command(char *cmd, char **args) {
 
         // 更新args[0]为带.b后缀的版本
         args[0] = cmd_with_b;
-        //debugf("Trying to spawn command with .b: %s\n", cmd_with_b);
+        // debugf("Trying to spawn command with .b: %s\n", cmd_with_b);
         result = spawn(cmd_with_b, args);
         if (result >= 0) {
             return result;
