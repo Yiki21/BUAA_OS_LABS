@@ -211,7 +211,7 @@ int read(int fdnum, void *buf, u_int n) {
 	 *  use. */
 	/* Exercise 5.10: Your code here. (4/4) */
 	if (r > 0)
-		fd->fd_offset += n;
+		fd->fd_offset += r;
 	return r;
 }
 

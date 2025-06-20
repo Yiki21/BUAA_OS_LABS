@@ -2,31 +2,31 @@
 
 int flag[256];
 
-void lsdir(char *, char *);
-void ls1(char *, u_int, u_int, char *);
+int lsdir(char *, char *);
+int ls1(char *, u_int, u_int, char *);
 
-void ls(char *path, char *prefix) {
+int ls(char *path, char *prefix) {
     int r;
     struct Stat st;
 
     if ((r = stat(path, &st)) < 0) {
         printf("ls: cannot access '%s': No such file or directory\n", path);
-        return;
+        return 1;
     }
     if (st.st_isdir && !flag['d']) {
-        lsdir(path, prefix);
+        return lsdir(path, prefix);
     } else {
-        ls1(0, st.st_isdir, st.st_size, path);
+        return ls1(0, st.st_isdir, st.st_size, path);
     }
 }
 
-void lsdir(char *path, char *prefix) {
+int lsdir(char *path, char *prefix) {
     int fd, n;
     struct File f;
 
     if ((fd = open(path, O_RDONLY)) < 0) {
         printf("ls: cannot open directory '%s'\n", path);
-        return;
+        return 1;
     }
     while ((n = readn(fd, &f, sizeof f)) == sizeof f) {
         if (f.f_name[0]) {
@@ -40,9 +40,10 @@ void lsdir(char *path, char *prefix) {
         printf("ls: error reading directory '%s': %d\n", path, n);
     }
     close(fd);
+    return 0;
 }
 
-void ls1(char *prefix, u_int isdir, u_int size, char *name) {
+int ls1(char *prefix, u_int isdir, u_int size, char *name) {
     char *sep;
 
     if (flag['l']) {
@@ -61,6 +62,7 @@ void ls1(char *prefix, u_int isdir, u_int size, char *name) {
         printf("/");
     }
     printf(" ");
+    return 0;
 }
 
 void usage(void) {
@@ -82,18 +84,19 @@ int main(int argc, char **argv) {
     }
     ARGEND
     
+    int r;
     if (argc == 0) {
         char cur_path[MAXPATHLEN];
         if (syscall_get_dir(cur_path) < 0) {
             strcpy(cur_path, "/");
         }
-        ls(cur_path, "");
+        r = ls(cur_path, "");
     } else {
         for (i = 0; i < argc; i++) {
-            ls(argv[i], argv[i]);
+            r = ls(argv[i], argv[i]);
         }
     }
     printf("\n");
     exit(0);
-    return 0;
+    return r;
 }
